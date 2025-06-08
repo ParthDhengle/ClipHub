@@ -1,27 +1,51 @@
-# See https://help.github.com/articles/ignoring-files/ for more about ignoring files.
+# Python
+__pycache__/
+*.py[cod]
+*.pyo
+*.pyd
+*.pyc
+*.so
 
-# dependencies
-/node_modules
+# Virtual environment
+venv/
+env/
+ENV/
+.venv/
 
-# next.js
-/.next/
-/out/
+# Environment variables
+.env
+*.env
 
-# production
-/build
+# IDEs and editors
+.vscode/
+.idea/
+*.swp
+*~
 
-# debug
-npm-debug.log*
-yarn-debug.log*
-yarn-error.log*
-.pnpm-debug.log*
+# OS-specific
+.DS_Store
+Thumbs.db
+ehthumbs.db
+Desktop.ini
 
-# env files
-.env*
+# Logs
+*.log
 
-# vercel
-.vercel
+# PyInstaller
+dist/
+build/
+*.spec
 
-# typescript
-*.tsbuildinfo
-next-env.d.ts
+# Coverage and testing
+htmlcov/
+.tox/
+.nox/
+.coverage
+coverage.xml
+.cache
+.pytest_cache/
+nosetests.xml
+test-results/
+
+# Uvicorn/Pydantic cache
+*.sqlite3
