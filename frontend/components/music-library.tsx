@@ -1,5 +1,6 @@
 "use client"
 
+import { useRouter } from "next/navigation"
 import { useState, useEffect } from "react"
 import { Search, Filter, Download, Heart, Eye, User, Music } from "lucide-react"
 import { Button } from "@/components/ui/button"
@@ -120,6 +121,20 @@ const sampleTracks: MusicTrack[] = [
   }
 ]
 
+const router = useRouter()
+const [likedMedia, setLikedMedia] = useState<Set<string>>(new Set())
+
+const handleLike = (id: string) => {
+  const newLikedMedia = new Set(likedMedia)
+  if (newLikedMedia.has(id)) {
+    newLikedMedia.delete(id)
+  } else {
+    newLikedMedia.add(id)
+  }
+  setLikedMedia(newLikedMedia)
+}
+
+
 export function MusicLibrary() {
   const [tracks, setTracks] = useState<MusicTrack[]>(sampleTracks)
   const [searchTerm, setSearchTerm] = useState("")
@@ -186,76 +201,82 @@ export function MusicLibrary() {
       {/* Music Grid */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
         {filteredTracks.map((track) => (
-          <Card key={track.id} className="group overflow-hidden hover:shadow-lg transition-shadow">
+          <Card 
+            key={track.id} 
+            className="group overflow-hidden hover:shadow-lg transition-shadow cursor-pointer"
+            onClick={() => router.push(`/music/${track.id}`)}
+            >
             <div className="relative aspect-[4/3] overflow-hidden">
-              <img
+                <img
                 src={track.thumbnail}
                 alt={track.title}
                 className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
-              />
-              {track.isPremium && (
+                />
+                {track.isPremium && (
                 <Badge className="absolute top-2 left-2 bg-yellow-500">
-                  Premium
+                    Premium
                 </Badge>
-              )}
-              <div className="absolute inset-0 bg-black/0 group-hover:bg-black/20 transition-colors duration-300" />
-              <div className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity duration-300">
+                )}
+                <div className="absolute inset-0 bg-black/0 group-hover:bg-black/20 transition-colors duration-300" />
+                <div className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity duration-300">
                 <div className="flex gap-1">
-                  <Button
+                    <Button
                     size="sm"
                     variant="secondary"
                     className="h-8 w-8 p-0"
-                    onClick={() => handleLike(track.id)}
-                  >
+                    onClick={(e) => {
+                        e.stopPropagation()
+                        handleLike(track.id)
+                    }}
+                    >
                     <Heart 
-                      className={`h-4 w-4 ${likedTracks.has(track.id) ? 'fill-red-500 text-red-500' : ''}`} 
+                        className={`h-4 w-4 ${likedMedia.has(track.id) ? 'fill-red-500 text-red-500' : ''}`} 
                     />
-                  </Button>
-                  <Button size="sm" variant="secondary" className="h-8 w-8 p-0">
+                    </Button>
+                    <Button 
+                    size="sm" 
+                    variant="secondary" 
+                    className="h-8 w-8 p-0"
+                    onClick={(e) => e.stopPropagation()}
+                    >
                     <Download className="h-4 w-4" />
-                  </Button>
+                    </Button>
                 </div>
-              </div>
+                </div>
             </div>
             <CardContent className="p-4">
-              <h3 className="font-medium mb-2 line-clamp-1">{track.title}</h3>
-              <div className="flex items-center gap-2 mb-3">
+                <h3 className="font-medium mb-2 line-clamp-1">{track.title}</h3>
+                <div className="flex items-center gap-2 mb-3">
                 <Avatar className="h-6 w-6">
-                  <AvatarImage src={track.creator.avatar} />
-                  <AvatarFallback>
+                    <AvatarImage src={track.creator.avatar} />
+                    <AvatarFallback>
                     <User className="h-3 w-3" />
-                  </AvatarFallback>
+                    </AvatarFallback>
                 </Avatar>
                 <span className="text-sm text-muted-foreground">{track.creator.name}</span>
-              </div>
-              <div className="flex flex-wrap gap-1 mb-3">
-                {track.genre.slice(0, 3).map(genre => (
-                  <Badge key={genre} variant="secondary" className="text-xs">
-                    {genre}
-                  </Badge>
+                </div>
+                <div className="flex flex-wrap gap-1 mb-3">
+                {track.tags.slice(0, 3).map(tag => (
+                    <Badge key={tag} variant="secondary" className="text-xs">
+                    {tag}
+                    </Badge>
                 ))}
-              </div>
-              <div className="flex items-center justify-between text-sm text-muted-foreground">
+                </div>
+                <div className="flex items-center justify-between text-sm text-muted-foreground">
                 <div className="flex items-center gap-3">
-                  <span className="flex items-center gap-1">
+                    <span className="flex items-center gap-1">
                     <Heart className="h-3 w-3" />
                     {track.likes}
-                  </span>
-                  <span className="flex items-center gap-1">
+                    </span>
+                    <span className="flex items-center gap-1">
                     <Eye className="h-3 w-3" />
                     {track.views}
-                  </span>
+                    </span>
                 </div>
-                <span className="flex items-center gap-1">
-                  <Music className="h-3 w-3" />
-                  {track.duration}
-                </span>
-              </div>
-              <div className="text-sm text-muted-foreground mt-1">
-                {track.downloads} downloads
-              </div>
+                <span>{track.downloads} downloads</span>
+                </div>
             </CardContent>
-          </Card>
+            </Card>
         ))}
       </div>
 

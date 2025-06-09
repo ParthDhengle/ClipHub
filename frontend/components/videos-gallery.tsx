@@ -1,5 +1,6 @@
 "use client"
 
+import { useRouter } from "next/navigation"
 import { useState } from "react"
 import { Search, Filter, Download, Heart, Eye, User, Play, Clock } from "lucide-react"
 import { Button } from "@/components/ui/button"
@@ -127,6 +128,19 @@ const sampleVideos: Video[] = [
   }
 ]
 
+const router = useRouter()
+const [likedMedia, setLikedMedia] = useState<Set<string>>(new Set())
+
+const handleLike = (id: string) => {
+  const newLikedMedia = new Set(likedMedia)
+  if (newLikedMedia.has(id)) {
+    newLikedMedia.delete(id)
+  } else {
+    newLikedMedia.add(id)
+  }
+  setLikedMedia(newLikedMedia)
+}
+
 export function VideosGallery() {
   const [videos, setVideos] = useState<Video[]>(sampleVideos)
   const [searchTerm, setSearchTerm] = useState("")
@@ -193,8 +207,12 @@ export function VideosGallery() {
       {/* Videos Grid */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
         {filteredVideos.map((video) => (
-          <Card key={video.id} className="group overflow-hidden hover:shadow-lg transition-shadow">
-            <div className="relative aspect-video overflow-hidden">
+          <Card 
+            key={video.id} 
+            className="group overflow-hidden hover:shadow-lg transition-shadow cursor-pointer"
+            onClick={() => router.push(`/videos/${video.id}`)}
+          >
+            <div className="relative aspect-[4/3] overflow-hidden">
               <img
                 src={video.thumbnail}
                 alt={video.title}
@@ -205,37 +223,28 @@ export function VideosGallery() {
                   Premium
                 </Badge>
               )}
-              <div className="absolute top-2 right-2">
-                <Badge variant="secondary" className="text-xs">
-                  {video.resolution}
-                </Badge>
-              </div>
-              <div className="absolute bottom-2 right-2">
-                <Badge variant="secondary" className="text-xs flex items-center gap-1">
-                  <Clock className="h-3 w-3" />
-                  {video.duration}
-                </Badge>
-              </div>
-              <div className="absolute inset-0 bg-black/0 group-hover:bg-black/20 transition-colors duration-300 flex items-center justify-center">
-                <div className="opacity-0 group-hover:opacity-100 transition-opacity duration-300">
-                  <Button size="lg" className="rounded-full w-16 h-16 p-0">
-                    <Play className="h-6 w-6 ml-1" fill="currentColor" />
-                  </Button>
-                </div>
-              </div>
-              <div className="absolute top-2 left-1/2 transform -translate-x-1/2 opacity-0 group-hover:opacity-100 transition-opacity duration-300">
+              <div className="absolute inset-0 bg-black/0 group-hover:bg-black/20 transition-colors duration-300" />
+              <div className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity duration-300">
                 <div className="flex gap-1">
                   <Button
                     size="sm"
                     variant="secondary"
                     className="h-8 w-8 p-0"
-                    onClick={() => handleLike(video.id)}
+                    onClick={(e) => {
+                      e.stopPropagation()
+                      handleLike(video.id)
+                    }}
                   >
                     <Heart 
-                      className={`h-4 w-4 ${likedVideos.has(video.id) ? 'fill-red-500 text-red-500' : ''}`} 
+                      className={`h-4 w-4 ${likedMedia.has(video.id) ? 'fill-red-500 text-red-500' : ''}`} 
                     />
                   </Button>
-                  <Button size="sm" variant="secondary" className="h-8 w-8 p-0">
+                  <Button 
+                    size="sm" 
+                    variant="secondary" 
+                    className="h-8 w-8 p-0"
+                    onClick={(e) => e.stopPropagation()}
+                  >
                     <Download className="h-4 w-4" />
                   </Button>
                 </div>
@@ -256,24 +265,24 @@ export function VideosGallery() {
                 {video.tags.slice(0, 3).map(tag => (
                   <Badge key={tag} variant="secondary" className="text-xs">
                     {tag}
-                    </Badge>
+                  </Badge>
                 ))}
               </div>
-                <div className="flex items-center justify-between text-sm text-muted-foreground">
-                    <div className="flex items-center gap-3">
-                    <span className="flex items-center gap-1">
-                        <Heart className="h-3 w-3" />
-                        {video.likes}
-                    </span>
-                    <span className="flex items-center gap-1">
-                        <Eye className="h-3 w-3" />
-                        {video.views}
-                    </span>
-                    </div>
-                    <span>{video.downloads} downloads</span>
+              <div className="flex items-center justify-between text-sm text-muted-foreground">
+                <div className="flex items-center gap-3">
+                  <span className="flex items-center gap-1">
+                    <Heart className="h-3 w-3" />
+                    {video.likes}
+                  </span>
+                  <span className="flex items-center gap-1">
+                    <Eye className="h-3 w-3" />
+                    {video.views}
+                  </span>
                 </div>
+                <span>{video.downloads} downloads</span>
+              </div>
             </CardContent>
-            </Card>
+          </Card>
         ))}
       </div>
         {/* Load More */}

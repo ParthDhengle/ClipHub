@@ -1,5 +1,6 @@
 "use client"
 
+import { useRouter } from "next/navigation"
 import { useState, useEffect } from "react"
 import { Search, Filter, Download, Heart, Eye, User } from "lucide-react"
 import { Button } from "@/components/ui/button"
@@ -113,6 +114,21 @@ const samplePhotos: Photo[] = [
   }
 ]
 
+
+// Add to state and functions within PhotosGallery component
+const router = useRouter()
+const [likedMedia, setLikedMedia] = useState<Set<string>>(new Set())
+
+const handleLike = (id: string) => {
+  const newLikedMedia = new Set(likedMedia)
+  if (newLikedMedia.has(id)) {
+    newLikedMedia.delete(id)
+  } else {
+    newLikedMedia.add(id)
+  }
+  setLikedMedia(newLikedMedia)
+}
+
 export function PhotosGallery() {
   const [photos, setPhotos] = useState<Photo[]>(samplePhotos)
   const [searchTerm, setSearchTerm] = useState("")
@@ -179,7 +195,11 @@ export function PhotosGallery() {
       {/* Photos Grid */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
         {filteredPhotos.map((photo) => (
-          <Card key={photo.id} className="group overflow-hidden hover:shadow-lg transition-shadow">
+          <Card 
+            key={photo.id} 
+            className="group overflow-hidden hover:shadow-lg transition-shadow cursor-pointer"
+            onClick={() => router.push(`/photos/${photo.id}`)}
+          >
             <div className="relative aspect-[4/3] overflow-hidden">
               <img
                 src={photo.thumbnail}
@@ -198,13 +218,21 @@ export function PhotosGallery() {
                     size="sm"
                     variant="secondary"
                     className="h-8 w-8 p-0"
-                    onClick={() => handleLike(photo.id)}
+                    onClick={(e) => {
+                      e.stopPropagation()
+                      handleLike(photo.id)
+                    }}
                   >
                     <Heart 
-                      className={`h-4 w-4 ${likedPhotos.has(photo.id) ? 'fill-red-500 text-red-500' : ''}`} 
+                      className={`h-4 w-4 ${likedMedia.has(photo.id) ? 'fill-red-500 text-red-500' : ''}`} 
                     />
                   </Button>
-                  <Button size="sm" variant="secondary" className="h-8 w-8 p-0">
+                  <Button 
+                    size="sm" 
+                    variant="secondary" 
+                    className="h-8 w-8 p-0"
+                    onClick={(e) => e.stopPropagation()}
+                  >
                     <Download className="h-4 w-4" />
                   </Button>
                 </div>
