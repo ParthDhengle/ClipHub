@@ -1,3 +1,4 @@
+/* Corrected File: components/music-library.tsx */
 "use client"
 
 import { useRouter } from "next/navigation"
@@ -23,6 +24,7 @@ interface MusicTrack {
   thumbnail: string // Optional: a cover image for the track
   genre: string[]
   duration: string // e.g., "3:45" for 3 minutes, 45 seconds
+  tags: string[]
   likes: number
   views: number
   downloads: number
@@ -42,6 +44,7 @@ const sampleTracks: MusicTrack[] = [
     thumbnail: "https://images.unsplash.com/photo-1511671786161-5c8d2c4b8999?w=400&h=300&fit=crop",
     genre: ["ambient", "chill", "relaxing"],
     duration: "4:12",
+    tags: ["calm", "background", "mood"],
     likes: 320,
     views: 1540,
     downloads: 102,
@@ -56,6 +59,7 @@ const sampleTracks: MusicTrack[] = [
     thumbnail: "https://images.unsplash.com/photo-1514525253161-7a46d19cd819?w=400&h=300&fit=crop",
     genre: ["pop", "energetic", "dance"],
     duration: "3:28",
+    tags: ["fun", "upbeat", "party"],
     likes: 245,
     views: 987,
     downloads: 78,
@@ -70,6 +74,7 @@ const sampleTracks: MusicTrack[] = [
     thumbnail: "https://images.unsplash.com/photo-1579547945413-497f067239a1?w=400&h=300&fit=crop",
     genre: ["cinematic", "epic", "orchestral"],
     duration: "5:10",
+    tags: ["dramatic", "soundtrack", "epic"],
     likes: 189,
     views: 762,
     downloads: 54,
@@ -84,6 +89,7 @@ const sampleTracks: MusicTrack[] = [
     thumbnail: "https://images.unsplash.com/photo-1516280440614-37939bbacd81?w=400&h=300&fit=crop",
     genre: ["lo-fi", "hip hop", "study"],
     duration: "2:55",
+    tags: ["relax", "study", "chill"],
     likes: 276,
     views: 1320,
     downloads: 95,
@@ -98,6 +104,7 @@ const sampleTracks: MusicTrack[] = [
     thumbnail: "https://images.unsplash.com/photo-1510915228340-29c85a43dcfe?w=400&h=300&fit=crop",
     genre: ["folk", "acoustic", "calm"],
     duration: "3:15",
+    tags: ["gentle", "folk", "acoustic"],
     likes: 154,
     views: 845,
     downloads: 62,
@@ -112,6 +119,7 @@ const sampleTracks: MusicTrack[] = [
     thumbnail: "https://images.unsplash.com/photo-1470225620780-dba8ba36c7b9?w=400&h=300&fit=crop",
     genre: ["electronic", "dance", "party"],
     duration: "4:30",
+    tags: ["dance", "edm", "energetic"],
     likes: 312,
     views: 1678,
     downloads: 134,
@@ -121,21 +129,8 @@ const sampleTracks: MusicTrack[] = [
   }
 ]
 
-const router = useRouter()
-const [likedMedia, setLikedMedia] = useState<Set<string>>(new Set())
-
-const handleLike = (id: string) => {
-  const newLikedMedia = new Set(likedMedia)
-  if (newLikedMedia.has(id)) {
-    newLikedMedia.delete(id)
-  } else {
-    newLikedMedia.add(id)
-  }
-  setLikedMedia(newLikedMedia)
-}
-
-
 export function MusicLibrary() {
+  const router = useRouter()
   const [tracks, setTracks] = useState<MusicTrack[]>(sampleTracks)
   const [searchTerm, setSearchTerm] = useState("")
   const [selectedCategory, setSelectedCategory] = useState("All")
@@ -145,7 +140,8 @@ export function MusicLibrary() {
 
   const filteredTracks = tracks.filter(track => {
     const matchesSearch = track.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                         track.genre.some(genre => genre.toLowerCase().includes(searchTerm.toLowerCase()))
+                         track.genre.some(genre => genre.toLowerCase().includes(searchTerm.toLowerCase())) ||
+                         track.tags.some(tag => tag.toLowerCase().includes(searchTerm.toLowerCase()))
     const matchesCategory = selectedCategory === "All" || track.category === selectedCategory
     return matchesSearch && matchesCategory
   })
@@ -205,78 +201,78 @@ export function MusicLibrary() {
             key={track.id} 
             className="group overflow-hidden hover:shadow-lg transition-shadow cursor-pointer"
             onClick={() => router.push(`/music/${track.id}`)}
-            >
+          >
             <div className="relative aspect-[4/3] overflow-hidden">
-                <img
+              <img
                 src={track.thumbnail}
                 alt={track.title}
                 className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
-                />
-                {track.isPremium && (
+              />
+              {track.isPremium && (
                 <Badge className="absolute top-2 left-2 bg-yellow-500">
-                    Premium
+                  Premium
                 </Badge>
-                )}
-                <div className="absolute inset-0 bg-black/0 group-hover:bg-black/20 transition-colors duration-300" />
-                <div className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity duration-300">
+              )}
+              <div className="absolute inset-0 bg-black/0 group-hover:bg-black/20 transition-colors duration-300" />
+              <div className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity duration-300">
                 <div className="flex gap-1">
-                    <Button
+                  <Button
                     size="sm"
                     variant="secondary"
                     className="h-8 w-8 p-0"
                     onClick={(e) => {
-                        e.stopPropagation()
-                        handleLike(track.id)
+                      e.stopPropagation()
+                      handleLike(track.id)
                     }}
-                    >
+                  >
                     <Heart 
-                        className={`h-4 w-4 ${likedMedia.has(track.id) ? 'fill-red-500 text-red-500' : ''}`} 
+                      className={`h-4 w-4 ${likedTracks.has(track.id) ? 'fill-red-500 text-red-500' : ''}`} 
                     />
-                    </Button>
-                    <Button 
+                  </Button>
+                  <Button 
                     size="sm" 
                     variant="secondary" 
                     className="h-8 w-8 p-0"
                     onClick={(e) => e.stopPropagation()}
-                    >
+                  >
                     <Download className="h-4 w-4" />
-                    </Button>
+                  </Button>
                 </div>
-                </div>
+              </div>
             </div>
             <CardContent className="p-4">
-                <h3 className="font-medium mb-2 line-clamp-1">{track.title}</h3>
-                <div className="flex items-center gap-2 mb-3">
+              <h3 className="font-medium mb-2 line-clamp-1">{track.title}</h3>
+              <div className="flex items-center gap-2 mb-3">
                 <Avatar className="h-6 w-6">
-                    <AvatarImage src={track.creator.avatar} />
-                    <AvatarFallback>
+                  <AvatarImage src={track.creator.avatar} />
+                  <AvatarFallback>
                     <User className="h-3 w-3" />
-                    </AvatarFallback>
+                  </AvatarFallback>
                 </Avatar>
                 <span className="text-sm text-muted-foreground">{track.creator.name}</span>
-                </div>
-                <div className="flex flex-wrap gap-1 mb-3">
+              </div>
+              <div className="flex flex-wrap gap-1 mb-3">
                 {track.tags.slice(0, 3).map(tag => (
-                    <Badge key={tag} variant="secondary" className="text-xs">
+                  <Badge key={tag} variant="secondary" className="text-xs">
                     {tag}
-                    </Badge>
+                  </Badge>
                 ))}
-                </div>
-                <div className="flex items-center justify-between text-sm text-muted-foreground">
+              </div>
+              <div className="flex items-center justify-between text-sm text-muted-foreground">
                 <div className="flex items-center gap-3">
-                    <span className="flex items-center gap-1">
+                  <span className="flex items-center gap-1">
                     <Heart className="h-3 w-3" />
                     {track.likes}
-                    </span>
-                    <span className="flex items-center gap-1">
+                  </span>
+                  <span className="flex items-center gap-1">
                     <Eye className="h-3 w-3" />
                     {track.views}
-                    </span>
+                  </span>
                 </div>
                 <span>{track.downloads} downloads</span>
-                </div>
+              </div>
             </CardContent>
-            </Card>
+          </Card>
         ))}
       </div>
 

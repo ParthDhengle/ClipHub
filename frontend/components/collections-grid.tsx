@@ -1,8 +1,9 @@
+
 "use client"
 
 import { useRouter } from "next/navigation"
 import { useState, useEffect } from "react"
-import { Search, Filter, Eye,Heart, User } from "lucide-react"
+import { Search, Filter, Eye, Heart, User, Download } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Badge } from "@/components/ui/badge"
@@ -23,6 +24,8 @@ interface Collection {
   themes: string[]
   itemCount: number
   views: number
+  likes: number
+  downloads: number
   creator: {
     name: string
     avatar?: string
@@ -39,6 +42,8 @@ const sampleCollections: Collection[] = [
     themes: ["nature", "landscapes", "wilderness"],
     itemCount: 25,
     views: 1345,
+    likes: 210,
+    downloads: 89,
     creator: { name: "Alex Chen", avatar: "https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?w=32&h=32&fit=crop&crop=face" },
     category: "Nature",
     isPremium: false
@@ -46,10 +51,12 @@ const sampleCollections: Collection[] = [
   {
     id: "2",
     title: "Urban Vibes",
-    thumbnail: "https://images.unsplash.com/photo-1449824913935-59a10b8d2000?w=400&h=300&fit=crop",
+    thumbnail: "https://images.unsplash.com/photo-1449824913935-59a10b8d2000?w=400&h=300&fit=camp",
     themes: ["city", "architecture", "urban"],
     itemCount: 18,
     views: 987,
+    likes: 165,
+    downloads: 62,
     creator: { name: "Sarah Kim", avatar: "https://images.unsplash.com/photo-1494790108755-2616b612b786?w=32&h=32&fit=crop&crop=face" },
     category: "Urban",
     isPremium: true
@@ -61,6 +68,8 @@ const sampleCollections: Collection[] = [
     themes: ["music", "cinematic", "epic"],
     itemCount: 12,
     views: 654,
+    likes: 134,
+    downloads: 45,
     creator: { name: "Mike Johnson", avatar: "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=32&h=32&fit=crop&crop=face" },
     category: "Music",
     isPremium: false
@@ -72,6 +81,8 @@ const sampleCollections: Collection[] = [
     themes: ["abstract", "patterns", "design"],
     itemCount: 20,
     views: 1123,
+    likes: 198,
+    downloads: 76,
     creator: { name: "Emma Davis", avatar: "https://images.unsplash.com/photo-1438761681033-6461ffad8d80?w=32&h=32&fit=crop&crop=face" },
     category: "Abstract",
     isPremium: true
@@ -83,6 +94,8 @@ const sampleCollections: Collection[] = [
     themes: ["food", "cuisine", "cooking"],
     itemCount: 15,
     views: 876,
+    likes: 145,
+    downloads: 58,
     creator: { name: "Lisa Wong", avatar: "https://images.unsplash.com/photo-1544725176-7c40e5a71c5e?w=32&h=32&fit=crop&crop=face" },
     category: "Food",
     isPremium: false
@@ -94,26 +107,16 @@ const sampleCollections: Collection[] = [
     themes: ["travel", "adventure", "destinations"],
     itemCount: 22,
     views: 1456,
+    likes: 234,
+    downloads: 92,
     creator: { name: "David Lee", avatar: "https://images.unsplash.com/photo-1500648767791-00dcc994a43e?w=32&h=32&fit=crop&crop=face" },
     category: "Travel",
     isPremium: true
   }
 ]
 
-const router = useRouter()
-const [likedMedia, setLikedMedia] = useState<Set<string>>(new Set())
-
-const handleLike = (id: string) => {
-  const newLikedMedia = new Set(likedMedia)
-  if (newLikedMedia.has(id)) {
-    newLikedMedia.delete(id)
-  } else {
-    newLikedMedia.add(id)
-  }
-  setLikedMedia(newLikedMedia)
-}
-
 export function CollectionsGrid() {
+  const router = useRouter()
   const [collections, setCollections] = useState<Collection[]>(sampleCollections)
   const [searchTerm, setSearchTerm] = useState("")
   const [selectedCategory, setSelectedCategory] = useState("All")
@@ -183,78 +186,78 @@ export function CollectionsGrid() {
             key={collection.id} 
             className="group overflow-hidden hover:shadow-lg transition-shadow cursor-pointer"
             onClick={() => router.push(`/collections/${collection.id}`)}
-            >
+          >
             <div className="relative aspect-[4/3] overflow-hidden">
-                <img
+              <img
                 src={collection.thumbnail}
                 alt={collection.title}
                 className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
-                />
-                {collection.isPremium && (
+              />
+              {collection.isPremium && (
                 <Badge className="absolute top-2 left-2 bg-yellow-500">
-                    Premium
+                  Premium
                 </Badge>
-                )}
-                <div className="absolute inset-0 bg-black/0 group-hover:bg-black/20 transition-colors duration-300" />
-                <div className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity duration-300">
+              )}
+              <div className="absolute inset-0 bg-black/0 group-hover:bg-black/20 transition-colors duration-300" />
+              <div className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity duration-300">
                 <div className="flex gap-1">
-                    <Button
+                  <Button
                     size="sm"
                     variant="secondary"
                     className="h-8 w-8 p-0"
                     onClick={(e) => {
-                        e.stopPropagation()
-                        handleLike(collection.id)
+                      e.stopPropagation()
+                      handleLike(collection.id)
                     }}
-                    >
+                  >
                     <Heart 
-                        className={`h-4 w-4 ${likedMedia.has(collection.id) ? 'fill-red-500 text-red-500' : ''}`} 
+                      className={`h-4 w-4 ${likedCollections.has(collection.id) ? 'fill-red-500 text-red-500' : ''}`} 
                     />
-                    </Button>
-                    <Button 
+                  </Button>
+                  <Button 
                     size="sm" 
                     variant="secondary" 
                     className="h-8 w-8 p-0"
                     onClick={(e) => e.stopPropagation()}
-                    >
+                  >
                     <Download className="h-4 w-4" />
-                    </Button>
+                  </Button>
                 </div>
-                </div>
+              </div>
             </div>
             <CardContent className="p-4">
-                <h3 className="font-medium mb-2 line-clamp-1">{collection.title}</h3>
-                <div className="flex items-center gap-2 mb-3">
+              <h3 className="font-medium mb-2 line-clamp-1">{collection.title}</h3>
+              <div className="flex items-center gap-2 mb-3">
                 <Avatar className="h-6 w-6">
-                    <AvatarImage src={collection.creator.avatar} />
-                    <AvatarFallback>
+                  <AvatarImage src={collection.creator.avatar} />
+                  <AvatarFallback>
                     <User className="h-3 w-3" />
-                    </AvatarFallback>
+                  </AvatarFallback>
                 </Avatar>
                 <span className="text-sm text-muted-foreground">{collection.creator.name}</span>
-                </div>
-                <div className="flex flex-wrap gap-1 mb-3">
-                {collection.tags.slice(0, 3).map(tag => (
-                    <Badge key={tag} variant="secondary" className="text-xs">
-                    {tag}
-                    </Badge>
+              </div>
+              <div className="flex flex-wrap gap-1 mb-3">
+                {collection.themes.slice(0, 3).map(theme => (
+                  <Badge key={theme} variant="secondary" className="text-xs">
+                    {theme}
+                  </Badge>
                 ))}
-                </div>
-                <div className="flex items-center justify-between text-sm text-muted-foreground">
+              </div>
+              <div className="flex items-center justify-between text-sm text-muted-foreground">
                 <div className="flex items-center gap-3">
-                    <span className="flex items-center gap-1">
+                  <span className="flex items-center gap-1">
                     <Heart className="h-3 w-3" />
                     {collection.likes}
-                    </span>
-                    <span className="flex items-center gap-1">
+                  </span>
+                  <span className="flex items-center gap-1">
                     <Eye className="h-3 w-3" />
                     {collection.views}
-                    </span>
+                  </span>
                 </div>
                 <span>{collection.downloads} downloads</span>
-                </div>
+              </div>
             </CardContent>
-            </Card>
+          </Card>
         ))}
       </div>
 

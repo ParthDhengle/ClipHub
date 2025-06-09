@@ -128,20 +128,11 @@ const sampleVideos: Video[] = [
   }
 ]
 
-const router = useRouter()
-const [likedMedia, setLikedMedia] = useState<Set<string>>(new Set())
 
-const handleLike = (id: string) => {
-  const newLikedMedia = new Set(likedMedia)
-  if (newLikedMedia.has(id)) {
-    newLikedMedia.delete(id)
-  } else {
-    newLikedMedia.add(id)
-  }
-  setLikedMedia(newLikedMedia)
-}
+
 
 export function VideosGallery() {
+  const router = useRouter()
   const [videos, setVideos] = useState<Video[]>(sampleVideos)
   const [searchTerm, setSearchTerm] = useState("")
   const [selectedCategory, setSelectedCategory] = useState("All")
@@ -236,7 +227,7 @@ export function VideosGallery() {
                     }}
                   >
                     <Heart 
-                      className={`h-4 w-4 ${likedMedia.has(video.id) ? 'fill-red-500 text-red-500' : ''}`} 
+                      className={`h-4 w-4 ${likedVideos.has(video.id) ? 'fill-red-500 text-red-500' : ''}`} 
                     />
                   </Button>
                   <Button 

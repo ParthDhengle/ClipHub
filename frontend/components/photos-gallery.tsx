@@ -114,22 +114,8 @@ const samplePhotos: Photo[] = [
   }
 ]
 
-
-// Add to state and functions within PhotosGallery component
-const router = useRouter()
-const [likedMedia, setLikedMedia] = useState<Set<string>>(new Set())
-
-const handleLike = (id: string) => {
-  const newLikedMedia = new Set(likedMedia)
-  if (newLikedMedia.has(id)) {
-    newLikedMedia.delete(id)
-  } else {
-    newLikedMedia.add(id)
-  }
-  setLikedMedia(newLikedMedia)
-}
-
 export function PhotosGallery() {
+  const router = useRouter()
   const [photos, setPhotos] = useState<Photo[]>(samplePhotos)
   const [searchTerm, setSearchTerm] = useState("")
   const [selectedCategory, setSelectedCategory] = useState("All")
@@ -224,7 +210,7 @@ export function PhotosGallery() {
                     }}
                   >
                     <Heart 
-                      className={`h-4 w-4 ${likedMedia.has(photo.id) ? 'fill-red-500 text-red-500' : ''}`} 
+                      className={`h-4 w-4 ${likedPhotos.has(photo.id) ? 'fill-red-500 text-red-500' : ''}`} 
                     />
                   </Button>
                   <Button 
