@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import Link from "next/link"
 import { Button } from "@/components/ui/button"
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet"
@@ -8,17 +8,46 @@ import {
   Menu,
   Upload,
   ChevronDown,
-  MoreHorizontal
+  MoreHorizontal,
+  User,
+  LogOut,
+  Settings,
+  Heart
 } from "lucide-react"
 import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
-  DropdownMenuTrigger
+  DropdownMenuTrigger,
+  DropdownMenuSeparator
 } from "@/components/ui/dropdown-menu"
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
+
+// Simple user type
+interface User {
+  id: string
+  name: string
+  email: string
+  avatar?: string
+  isCreator: boolean
+}
 
 export function Header() {
   const [isOpen, setIsOpen] = useState(false)
+  const [user, setUser] = useState<User | null>(null)
+
+  // Check for user session on mount
+  useEffect(() => {
+    const savedUser = localStorage.getItem('cliphub_user')
+    if (savedUser) {
+      setUser(JSON.parse(savedUser))
+    }
+  }, [])
+
+  const handleLogout = () => {
+    localStorage.removeItem('cliphub_user')
+    setUser(null)
+  }
 
   return (
     <header className="fixed top-0 left-0 right-0 z-50 bg-background/80 backdrop-blur-md">
@@ -75,22 +104,79 @@ export function Header() {
             <Link href="/creators" className="text-sm font-medium text-foreground">
               Creators
             </Link>
-            <Link href="/upload" className="text-sm font-medium text-foreground flex items-center">
-              <Upload className="mr-1 h-4 w-4" />
-              Upload
-            </Link>
+            {user?.isCreator && (
+              <Link href="/upload" className="text-sm font-medium text-foreground flex items-center">
+                <Upload className="mr-1 h-4 w-4" />
+                Upload
+              </Link>
+            )}
           </nav>
 
           {/* Desktop Actions */}
           <div className="hidden md:flex items-center space-x-4">
-            <Button variant="ghost" size="sm">
-              <MoreHorizontal className="h-4 w-4" />
-            </Button>
-            <Link href="/join">
-              <Button className="bg-blue-600 text-white hover:bg-blue-700 transition">
-                Join
-              </Button>
-            </Link>
+            {user ? (
+              <>
+                <Button variant="ghost" size="sm">
+                  <Heart className="h-4 w-4" />
+                </Button>
+                <DropdownMenu>
+                  <DropdownMenuTrigger asChild>
+                    <Button variant="ghost" className="relative h-8 w-8 rounded-full">
+                      <Avatar className="h-8 w-8">
+                        <AvatarImage src={user.avatar} alt={user.name} />
+                        <AvatarFallback>{user.name.charAt(0).toUpperCase()}</AvatarFallback>
+                      </Avatar>
+                    </Button>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent className="w-56" align="end" forceMount>
+                    <div className="flex items-center justify-start gap-2 p-2">
+                      <div className="flex flex-col space-y-1 leading-none">
+                        <p className="font-medium">{user.name}</p>
+                        <p className="w-[200px] truncate text-sm text-muted-foreground">
+                          {user.email}
+                        </p>
+                      </div>
+                    </div>
+                    <DropdownMenuSeparator />
+                    <DropdownMenuItem asChild>
+                      <Link href="/preferences">
+                        <Settings className="mr-2 h-4 w-4" />
+                        Preferences
+                      </Link>
+                    </DropdownMenuItem>
+                    {!user.isCreator && (
+                      <DropdownMenuItem asChild>
+                        <Link href="/join">
+                          <User className="mr-2 h-4 w-4" />
+                          Become Creator
+                        </Link>
+                      </DropdownMenuItem>
+                    )}
+                    <DropdownMenuSeparator />
+                    <DropdownMenuItem onClick={handleLogout}>
+                      <LogOut className="mr-2 h-4 w-4" />
+                      Log out
+                    </DropdownMenuItem>
+                  </DropdownMenuContent>
+                </DropdownMenu>
+              </>
+            ) : (
+              <>
+                <Button variant="ghost" size="sm">
+                  <MoreHorizontal className="h-4 w-4" />
+                </Button>
+                <Link href="/login">
+                  <Button variant="outline" size="sm">
+                    Login
+                  </Button>
+                </Link>
+                <Link href="/join">
+                  <Button className="bg-blue-600 text-white hover:bg-blue-700 transition">
+                    Join
+                  </Button>
+                </Link>
+              </>
+            )}
           </div>
 
           {/* Mobile Menu */}
@@ -102,6 +188,19 @@ export function Header() {
             </SheetTrigger>
             <SheetContent side="right" className="w-[300px] sm:w-[400px]">
               <div className="flex flex-col space-y-4 mt-8">
+                {user && (
+                  <div className="flex items-center space-x-3 pb-4 border-b">
+                    <Avatar className="h-10 w-10">
+                      <AvatarImage src={user.avatar} alt={user.name} />
+                      <AvatarFallback>{user.name.charAt(0).toUpperCase()}</AvatarFallback>
+                    </Avatar>
+                    <div>
+                      <p className="font-medium">{user.name}</p>
+                      <p className="text-sm text-muted-foreground">{user.email}</p>
+                    </div>
+                  </div>
+                )}
+
                 {[
                   ["photos", "Photos"],
                   ["videos", "Videos"],
@@ -109,7 +208,7 @@ export function Header() {
                   ["collections", "Collections"],
                   ["license", "License"],
                   ["creators", "Creators"],
-                  ["upload", "Upload"]
+                  ...(user?.isCreator ? [["upload", "Upload"]] : [])
                 ].map(([href, label]) => (
                   <Link
                     key={href}
@@ -123,11 +222,33 @@ export function Header() {
                 ))}
 
                 <div className="pt-4 border-t">
-                  <Link href="/join" onClick={() => setIsOpen(false)}>
-                    <Button className="w-full bg-blue-600 text-white hover:bg-blue-700 transition">
-                      Join
-                    </Button>
-                  </Link>
+                  {user ? (
+                    <div className="space-y-2">
+                      <Link href="/preferences" onClick={() => setIsOpen(false)}>
+                        <Button variant="outline" className="w-full">
+                          <Settings className="mr-2 h-4 w-4" />
+                          Preferences
+                        </Button>
+                      </Link>
+                      <Button onClick={handleLogout} variant="ghost" className="w-full">
+                        <LogOut className="mr-2 h-4 w-4" />
+                        Log out
+                      </Button>
+                    </div>
+                  ) : (
+                    <div className="space-y-2">
+                      <Link href="/login" onClick={() => setIsOpen(false)}>
+                        <Button variant="outline" className="w-full">
+                          Login
+                        </Button>
+                      </Link>
+                      <Link href="/join" onClick={() => setIsOpen(false)}>
+                        <Button className="w-full bg-blue-600 text-white hover:bg-blue-700 transition">
+                          Join
+                        </Button>
+                      </Link>
+                    </div>
+                  )}
                 </div>
               </div>
             </SheetContent>
