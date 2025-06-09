@@ -24,8 +24,8 @@ export function Categories() {
     { name: "Music", icon: Music, path: "/music" },
     { name: "Creators", icon: Users, path: "/creators" },
     { name: "Collections", icon: Bookmark, path: "/collections" },
-    { name: "Leaderboard", icon: Users }, // No path yet
-    { name: "Challenges", icon: ImageIcon }, // No path yet
+    { name: "Leaderboard", icon: Users , path: "/leaderboard"  }, // No path yet
+    { name: "Challenges", icon: ImageIcon, path: "/challenges"  }, // No path yet
   ]
 
   // Get current pathname to determine active category
