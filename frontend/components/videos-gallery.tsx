@@ -1,0 +1,287 @@
+"use client"
+
+import { useState } from "react"
+import { Search, Filter, Download, Heart, Eye, User, Play, Clock } from "lucide-react"
+import { Button } from "@/components/ui/button"
+import { Input } from "@/components/ui/input"
+import { Badge } from "@/components/ui/badge"
+import { Card, CardContent } from "@/components/ui/card"
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select"
+
+interface Video {
+  id: string
+  title: string
+  thumbnail: string
+  duration: string
+  tags: string[]
+  likes: number
+  views: number
+  downloads: number
+  creator: {
+    name: string
+    avatar?: string
+  }
+  category: string
+  isPremium: boolean
+  resolution: string
+  fps: number
+}
+
+const sampleVideos: Video[] = [
+  {
+    id: "1",
+    title: "Ocean Waves in Slow Motion",
+    thumbnail: "https://images.unsplash.com/photo-1505142468610-359e7d316be0?w=400&h=300&fit=crop",
+    duration: "0:15",
+    tags: ["nature", "ocean", "waves", "slow-motion"],
+    likes: 342,
+    views: 2150,
+    downloads: 127,
+    creator: { name: "Ocean Films", avatar: "https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?w=32&h=32&fit=crop&crop=face" },
+    category: "Nature",
+    isPremium: false,
+    resolution: "4K",
+    fps: 60
+  },
+  {
+    id: "2",
+    title: "Corporate Team Meeting",
+    thumbnail: "https://images.unsplash.com/photo-1556761175-b413da4baf72?w=400&h=300&fit=crop",
+    duration: "0:30",
+    tags: ["business", "meeting", "corporate", "teamwork"],
+    likes: 189,
+    views: 1456,
+    downloads: 78,
+    creator: { name: "Biz Content", avatar: "https://images.unsplash.com/photo-1494790108755-2616b612b786?w=32&h=32&fit=crop&crop=face" },
+    category: "Business",
+    isPremium: true,
+    resolution: "1080p",
+    fps: 30
+  },
+  {
+    id: "3",
+    title: "City Traffic Time Lapse",
+    thumbnail: "https://images.unsplash.com/photo-1449824913935-59a10b8d2000?w=400&h=300&fit=crop",
+    duration: "0:20",
+    tags: ["city", "traffic", "timelapse", "urban"],
+    likes: 267,
+    views: 1834,
+    downloads: 94,
+    creator: { name: "Urban Lens", avatar: "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=32&h=32&fit=crop&crop=face" },
+    category: "Urban",
+    isPremium: false,
+    resolution: "4K",
+    fps: 24
+  },
+  {
+    id: "4",
+    title: "Coffee Brewing Process",
+    thumbnail: "https://images.unsplash.com/photo-1453728013993-6d66e9c9123a?w=400&h=300&fit=crop",
+    duration: "0:25",
+    tags: ["coffee", "brewing", "lifestyle", "morning"],
+    likes: 156,
+    views: 987,
+    downloads: 52,
+    creator: { name: "Lifestyle Studio", avatar: "https://images.unsplash.com/photo-1438761681033-6461ffad8d80?w=32&h=32&fit=crop&crop=face" },
+    category: "Lifestyle",
+    isPremium: true,
+    resolution: "1080p",
+    fps: 30
+  },
+  {
+    id: "5",
+    title: "Abstract Light Patterns",
+    thumbnail: "https://images.unsplash.com/photo-1557804506-669a67965ba0?w=400&h=300&fit=crop",
+    duration: "0:12",
+    tags: ["abstract", "light", "motion", "graphics"],
+    likes: 298,
+    views: 2456,
+    downloads: 143,
+    creator: { name: "Motion Graphics", avatar: "https://images.unsplash.com/photo-1544725176-7c40e5a71c5e?w=32&h=32&fit=crop&crop=face" },
+    category: "Abstract",
+    isPremium: true,
+    resolution: "4K",
+    fps: 60
+  },
+  {
+    id: "6",
+    title: "Mountain Hiking Adventure",
+    thumbnail: "https://images.unsplash.com/photo-1506905925346-21bda4d32df4?w=400&h=300&fit=crop",
+    duration: "0:45",
+    tags: ["adventure", "hiking", "mountains", "outdoor"],
+    likes: 412,
+    views: 3124,
+    downloads: 198,
+    creator: { name: "Adventure Co", avatar: "https://images.unsplash.com/photo-1500648767791-00dcc994a43e?w=32&h=32&fit=crop&crop=face" },
+    category: "Adventure",
+    isPremium: false,
+    resolution: "4K",
+    fps: 30
+  }
+]
+
+export function VideosGallery() {
+  const [videos, setVideos] = useState<Video[]>(sampleVideos)
+  const [searchTerm, setSearchTerm] = useState("")
+  const [selectedCategory, setSelectedCategory] = useState("All")
+  const [likedVideos, setLikedVideos] = useState<Set<string>>(new Set())
+
+  const categories = ["All", "Nature", "Business", "Urban", "Lifestyle", "Abstract", "Adventure"]
+
+  const filteredVideos = videos.filter(video => {
+    const matchesSearch = video.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                         video.tags.some(tag => tag.toLowerCase().includes(searchTerm.toLowerCase()))
+    const matchesCategory = selectedCategory === "All" || video.category === selectedCategory
+    return matchesSearch && matchesCategory
+  })
+
+  const handleLike = (videoId: string) => {
+    const newLikedVideos = new Set(likedVideos)
+    if (newLikedVideos.has(videoId)) {
+      newLikedVideos.delete(videoId)
+    } else {
+      newLikedVideos.add(videoId)
+    }
+    setLikedVideos(newLikedVideos)
+  }
+
+  return (
+    <div className="space-y-6">
+      {/* Search and Filters */}
+      <div className="flex flex-col md:flex-row gap-4 items-center justify-between">
+        <div className="relative flex-1 max-w-md">
+          <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground h-4 w-4" />
+          <Input
+            placeholder="Search videos..."
+            value={searchTerm}
+            onChange={(e) => setSearchTerm(e.target.value)}
+            className="pl-10"
+          />
+        </div>
+        <div className="flex gap-4 items-center">
+          <Select value={selectedCategory} onValueChange={setSelectedCategory}>
+            <SelectTrigger className="w-[140px]">
+              <SelectValue placeholder="Category" />
+            </SelectTrigger>
+            <SelectContent>
+              {categories.map(category => (
+                <SelectItem key={category} value={category}>
+                  {category}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+          <Button variant="outline" size="sm">
+            <Filter className="h-4 w-4 mr-2" />
+            More Filters
+          </Button>
+        </div>
+      </div>
+
+      {/* Results count */}
+      <div className="text-sm text-muted-foreground">
+        Showing {filteredVideos.length} videos
+      </div>
+
+      {/* Videos Grid */}
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+        {filteredVideos.map((video) => (
+          <Card key={video.id} className="group overflow-hidden hover:shadow-lg transition-shadow">
+            <div className="relative aspect-video overflow-hidden">
+              <img
+                src={video.thumbnail}
+                alt={video.title}
+                className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
+              />
+              {video.isPremium && (
+                <Badge className="absolute top-2 left-2 bg-yellow-500">
+                  Premium
+                </Badge>
+              )}
+              <div className="absolute top-2 right-2">
+                <Badge variant="secondary" className="text-xs">
+                  {video.resolution}
+                </Badge>
+              </div>
+              <div className="absolute bottom-2 right-2">
+                <Badge variant="secondary" className="text-xs flex items-center gap-1">
+                  <Clock className="h-3 w-3" />
+                  {video.duration}
+                </Badge>
+              </div>
+              <div className="absolute inset-0 bg-black/0 group-hover:bg-black/20 transition-colors duration-300 flex items-center justify-center">
+                <div className="opacity-0 group-hover:opacity-100 transition-opacity duration-300">
+                  <Button size="lg" className="rounded-full w-16 h-16 p-0">
+                    <Play className="h-6 w-6 ml-1" fill="currentColor" />
+                  </Button>
+                </div>
+              </div>
+              <div className="absolute top-2 left-1/2 transform -translate-x-1/2 opacity-0 group-hover:opacity-100 transition-opacity duration-300">
+                <div className="flex gap-1">
+                  <Button
+                    size="sm"
+                    variant="secondary"
+                    className="h-8 w-8 p-0"
+                    onClick={() => handleLike(video.id)}
+                  >
+                    <Heart 
+                      className={`h-4 w-4 ${likedVideos.has(video.id) ? 'fill-red-500 text-red-500' : ''}`} 
+                    />
+                  </Button>
+                  <Button size="sm" variant="secondary" className="h-8 w-8 p-0">
+                    <Download className="h-4 w-4" />
+                  </Button>
+                </div>
+              </div>
+            </div>
+            <CardContent className="p-4">
+              <h3 className="font-medium mb-2 line-clamp-1">{video.title}</h3>
+              <div className="flex items-center gap-2 mb-3">
+                <Avatar className="h-6 w-6">
+                  <AvatarImage src={video.creator.avatar} />
+                  <AvatarFallback>
+                    <User className="h-3 w-3" />
+                  </AvatarFallback>
+                </Avatar>
+                <span className="text-sm text-muted-foreground">{video.creator.name}</span>
+              </div>
+              <div className="flex flex-wrap gap-1 mb-3">
+                {video.tags.slice(0, 3).map(tag => (
+                  <Badge key={tag} variant="secondary" className="text-xs">
+                    {tag}
+                    </Badge>
+                ))}
+              </div>
+                <div className="flex items-center justify-between text-sm text-muted-foreground">
+                    <div className="flex items-center gap-3">
+                    <span className="flex items-center gap-1">
+                        <Heart className="h-3 w-3" />
+                        {video.likes}
+                    </span>
+                    <span className="flex items-center gap-1">
+                        <Eye className="h-3 w-3" />
+                        {video.views}
+                    </span>
+                    </div>
+                    <span>{video.downloads} downloads</span>
+                </div>
+            </CardContent>
+            </Card>
+        ))}
+      </div>
+        {/* Load More */}
+        <div className="text-center mt-6">
+            <Button variant="outline" size="lg">
+                Load More Videos
+            </Button>
+        </div>
+    </div>
+)
+}
