@@ -11,6 +11,28 @@ import { Camera, ImageIcon, Users, Award, Search, Filter } from "lucide-react"
 
 export function CreatorsDirectory() {
   const [searchQuery, setSearchQuery] = useState("")
+  const [showForm, setShowForm] = useState(false)
+
+  const [form, setForm] = useState({
+    firstName: "",
+    lastName: "",
+    email: "",
+    password: "",
+  })
+
+  const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const { name, value } = e.target
+    setForm((prev) => ({
+      ...prev,
+      [name]: value,
+    }))
+  }
+
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault()
+    console.log("Form submitted:", form)
+    // TODO: Replace with actual API call
+  }
 
   const creators = [
     {
@@ -159,90 +181,61 @@ export function CreatorsDirectory() {
                 </Card>
               ))}
             </div>
-
-            <div className="mt-8 text-center">
-              <Button variant="outline" size="lg">
-                Load More
-              </Button>
-            </div>
-          </TabsContent>
-
-          <TabsContent value="featured" className="mt-0">
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-              {creators
-                .filter((c) => c.featured)
-                .map((creator) => (
-                  <Card key={creator.name} className="overflow-hidden hover:shadow-lg transition-all">
-                    <div className="h-24 bg-gradient-to-r from-blue-400 to-purple-500"></div>
-                    <CardContent className="pt-0 relative">
-                      <div className="flex justify-center">
-                        <Avatar className="h-20 w-20 border-4 border-background -mt-10">
-                          <AvatarImage src={creator.avatar || "/placeholder.svg"} />
-                          <AvatarFallback>{creator.name.charAt(0)}</AvatarFallback>
-                        </Avatar>
-                      </div>
-
-                      <div className="text-center mt-3">
-                        <h3 className="font-semibold text-lg">{creator.name}</h3>
-                        <p className="text-muted-foreground text-sm">{creator.username}</p>
-
-                        <Badge className="mt-2 bg-gradient-to-r from-amber-500 to-orange-500">
-                          <Award className="h-3 w-3 mr-1" />
-                          {creator.badge}
-                        </Badge>
-
-                        <p className="text-sm mt-3 line-clamp-2">{creator.bio}</p>
-
-                        <div className="flex justify-center space-x-6 mt-4">
-                          <div className="text-center">
-                            <p className="text-muted-foreground text-xs">Photos</p>
-                            <div className="flex items-center justify-center">
-                              <Camera className="h-3 w-3 mr-1" />
-                              <p className="font-medium">{creator.photos}</p>
-                            </div>
-                          </div>
-                          <div className="text-center">
-                            <p className="text-muted-foreground text-xs">Followers</p>
-                            <div className="flex items-center justify-center">
-                              <Users className="h-3 w-3 mr-1" />
-                              <p className="font-medium">{creator.followers}</p>
-                            </div>
-                          </div>
-                        </div>
-
-                        <Button className="mt-4 w-full">View Profile</Button>
-                      </div>
-                    </CardContent>
-                  </Card>
-                ))}
-            </div>
-          </TabsContent>
-
-          <TabsContent value="popular" className="mt-0">
-            <div className="text-center py-12">
-              <ImageIcon className="h-16 w-16 mx-auto text-muted-foreground mb-4" />
-              <h3 className="text-lg font-semibold mb-2">Popular Creators</h3>
-              <p className="text-muted-foreground">Discover our most followed creators</p>
-            </div>
-          </TabsContent>
-
-          <TabsContent value="new" className="mt-0">
-            <div className="text-center py-12">
-              <ImageIcon className="h-16 w-16 mx-auto text-muted-foreground mb-4" />
-              <h3 className="text-lg font-semibold mb-2">New Creators</h3>
-              <p className="text-muted-foreground">Discover creators who recently joined our platform</p>
-            </div>
           </TabsContent>
         </Tabs>
 
-        {/* Become a Creator CTA */}
+        {/* Join as Creator Section */}
         <div className="mt-16 bg-gradient-to-r from-blue-50 to-purple-50 rounded-lg p-8 text-center max-w-3xl mx-auto">
           <h2 className="text-2xl font-bold mb-3">Become a ClipHub Creator</h2>
           <p className="text-muted-foreground mb-6 max-w-lg mx-auto">
-            Share your creative work with millions of users worldwide. Join our community of talented creators and earn
-            recognition for your art.
+            Share your creative work with millions of users. Join now.
           </p>
-          <Button size="lg">Join as Creator</Button>
+
+          {!showForm ? (
+            <Button size="lg" onClick={() => setShowForm(true)}>
+              Join as Creator
+            </Button>
+          ) : (
+            <form onSubmit={handleSubmit} className="mt-6 grid gap-4 text-left max-w-md mx-auto">
+              <div className="flex gap-4">
+                <Input
+                  type="text"
+                  name="firstName"
+                  placeholder="First name"
+                  value={form.firstName}
+                  onChange={handleChange}
+                  required
+                />
+                <Input
+                  type="text"
+                  name="lastName"
+                  placeholder="Last name"
+                  value={form.lastName}
+                  onChange={handleChange}
+                  required
+                />
+              </div>
+              <Input
+                type="email"
+                name="email"
+                placeholder="Email"
+                value={form.email}
+                onChange={handleChange}
+                required
+              />
+              <Input
+                type="password"
+                name="password"
+                placeholder="Password"
+                value={form.password}
+                onChange={handleChange}
+                required
+              />
+              <Button type="submit" className="w-full">
+                Create Account
+              </Button>
+            </form>
+          )}
         </div>
       </div>
     </section>

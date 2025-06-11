@@ -23,7 +23,6 @@ import {
 } from "@/components/ui/dropdown-menu"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 
-// Simple user type
 interface User {
   id: string
   name: string
@@ -36,7 +35,6 @@ export function Header() {
   const [isOpen, setIsOpen] = useState(false)
   const [user, setUser] = useState<User | null>(null)
 
-  // Check for user session on mount
   useEffect(() => {
     const savedUser = localStorage.getItem('cliphub_user')
     if (savedUser) {
@@ -104,12 +102,10 @@ export function Header() {
             <Link href="/creators" className="text-sm font-medium text-foreground">
               Creators
             </Link>
-            {user?.isCreator && (
-              <Link href="/upload" className="text-sm font-medium text-foreground flex items-center">
-                <Upload className="mr-1 h-4 w-4" />
-                Upload
-              </Link>
-            )}
+            <Link href="/upload" className="text-sm font-medium text-foreground flex items-center">
+              <Upload className="mr-1 h-4 w-4" />
+              Upload
+            </Link>
           </nav>
 
           {/* Desktop Actions */}
@@ -208,7 +204,7 @@ export function Header() {
                   ["collections", "Collections"],
                   ["license", "License"],
                   ["creators", "Creators"],
-                  ...(user?.isCreator ? [["upload", "Upload"]] : [])
+                  ["upload", "Upload"]
                 ].map(([href, label]) => (
                   <Link
                     key={href}

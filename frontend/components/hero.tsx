@@ -4,7 +4,12 @@ import { useState } from "react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Search, ChevronDown } from "lucide-react"
-import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu"
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger
+} from "@/components/ui/dropdown-menu"
 
 export function Hero() {
   const [searchType, setSearchType] = useState("Photos")
@@ -15,16 +20,17 @@ export function Hero() {
       {/* Background Image */}
       <div
         className="absolute inset-0 bg-cover bg-center"
-        style={{ backgroundImage: "url('/placeholder.svg?height=600&width=1200')" }}
+        style={{ backgroundImage: "url('/Background.jpg')" }}
       >
         <div className="absolute inset-0 bg-black/40"></div>
       </div>
 
-      {/* Floating Elements */}
+      {/* Floating Decorative Elements */}
       <div className="absolute top-20 left-10 w-4 h-4 bg-yellow-400 rounded-full animate-bounce opacity-70"></div>
       <div className="absolute top-40 right-20 w-6 h-6 bg-pink-400 rounded-full animate-bounce delay-300 opacity-70"></div>
       <div className="absolute bottom-40 left-20 w-5 h-5 bg-blue-400 rounded-full animate-bounce delay-500 opacity-70"></div>
 
+      {/* Main Content */}
       <div className="container mx-auto px-4 sm:px-6 lg:px-8 relative z-10 text-center">
         <h1 className="text-3xl sm:text-4xl lg:text-5xl font-bold text-white mb-6 animate-fade-in">
           Discover Amazing{" "}
@@ -67,23 +73,15 @@ export function Hero() {
               <Search className="h-5 w-5" />
             </Button>
           </div>
+
+          {/* Trending Tags */}
           <div className="mt-4 text-sm text-white/80">
             <span>Trending: </span>
-            <Button variant="link" className="text-white p-0 h-auto text-sm">
-              nature,
-            </Button>
-            <Button variant="link" className="text-white p-0 h-auto text-sm">
-              business,
-            </Button>
-            <Button variant="link" className="text-white p-0 h-auto text-sm">
-              food,
-            </Button>
-            <Button variant="link" className="text-white p-0 h-auto text-sm">
-              travel,
-            </Button>
-            <Button variant="link" className="text-white p-0 h-auto text-sm">
-              technology
-            </Button>
+            {["nature", "business", "food", "travel", "technology"].map((tag) => (
+              <Button key={tag} variant="link" className="text-white p-0 h-auto text-sm">
+                {tag},
+              </Button>
+            ))}
           </div>
         </div>
       </div>
