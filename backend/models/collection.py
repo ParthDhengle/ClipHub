@@ -1,9 +1,18 @@
-# backend/models/collection.py
 from pydantic import BaseModel
-from typing import List, Optional
+from typing import Optional, List
+from models.common import TimestampModel
 
-class Collection(BaseModel):
+class CollectionBase(BaseModel):
     title: str
-    media: List[str]
-    creator: str
-    id: Optional[str] = None
+    item_count: int = 0
+
+class CollectionCreate(CollectionBase):
+    media_ids: List[str] = []
+
+class CollectionUpdate(CollectionBase):
+    media_ids: Optional[List[str]] = None
+
+class CollectionInDB(CollectionBase, TimestampModel):
+    collection_id: str
+    user_id: str
+    media_ids: List[str]

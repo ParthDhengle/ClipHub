@@ -1,28 +1,19 @@
-from fastapi import APIRouter, Depends, HTTPException
-from pymongo import MongoClient
-from dotenv import load_dotenv
-import os
-from models.collection import Collection
+from fastapi import APIRouter, Depends
+from models.collection import CollectionCreate, CollectionInDB
+from services.collection_service import create_collection, get_collection
 from middleware.auth import get_current_user
+from typing import Dict
 
-load_dotenv()
 router = APIRouter()
-client = MongoClient(os.getenv("MONGODB_URI", "mongodb://localhost:27017"))
-db = client["cliphub"]
 
-@router.post("/")
-async def create_collection(collection: Collection, current_user: dict = Depends(get_current_user)):
-    collection.creator = current_user["id"]
-    for media_id in collection.media:
-        if not db.media.find_one({"_id": media_id}):
-            raise HTTPException(status_code=404, detail=f"Media {media_id} not found")
-    result = db.collections.insert_one(collection.dict())
-    return collection.dict() | {"id": str(result.inserted_id)}
+@router.post("/", response_model=CollectionInDB)
+async def create_collection_endpoint(collection: CollectionCreate, current_user: Dict = Depends(get_current_user)):
+    collection_in_db = await create_collection(current_user["user_id"], collection)
+    return collection_in_db
 
-@router.get("/")
-async def get_collections():
-    collections = list(db.collections.find())
-    for item in collections:
-        item["id"] = str(item["_id"])
-        del item["_id"]
-    return collections
+@router.get("/{collection_id}", response_model=CollectionInDB)
+async def get_collection_endpoint(collection_id: str):
+    collection = await get_collection(collection_id)
+    if not collection:
+        raise HTTPException(status_code=404, detail="Collection not found")
+    return collection

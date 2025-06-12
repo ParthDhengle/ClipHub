@@ -1,42 +1,24 @@
-from fastapi import APIRouter, UploadFile, File, Form, Depends, HTTPException
-from pymongo import MongoClient
-from dotenv import load_dotenv
-import os
-from models.media import Media
+from fastapi import APIRouter, Depends
+from models.media import MediaCreate, MediaInDB
+from services.media_service import create_media, get_media, list_media
 from middleware.auth import get_current_user
-import shutil
+from typing import List, Dict
 
-load_dotenv()
 router = APIRouter()
-client = MongoClient(os.getenv("MONGODB_URI", "mongodb://localhost:27017"))
-db = client["cliphub"]
 
-@router.post("/upload")
-async def upload_media(
-    file: UploadFile = File(...),
-    title: str = Form(...),
-    current_user: dict = Depends(get_current_user)
-):
-    file_ext = file.filename.split(".")[-1]
-    file_type = "image" if file.content_type.startswith("image") else "video" if file.content_type.startswith("video") else "audio"
-    file_path = f"uploads/{file_type}/{current_user['id']}_{title}_{file.filename}"
-    os.makedirs(os.path.dirname(file_path), exist_ok=True)
-    with open(file_path, "wb") as f:
-        shutil.copyfileobj(file.file, f)
-    media = Media(
-        title=title,
-        type=file_type,
-        url=f"/{file_path}",
-        creator=current_user["id"],
-        approved=False
-    )
-    result = db.media.insert_one(media.dict())
-    return media.dict() | {"id": str(result.inserted_id)}
+@router.post("/", response_model=MediaInDB)
+async def create_media_endpoint(media: MediaCreate, current_user: Dict = Depends(get_current_user)):
+    media_in_db = await create_media(current_user["user_id"], media)
+    return media_in_db
 
-@router.get("/")
-async def get_media():
-    media = list(db.media.find())
-    for item in media:
-        item["id"] = str(item["_id"])
-        del item["_id"]
+@router.get("/{media_id}", response_model=MediaInDB)
+async def get_media_endpoint(media_id: str):
+    media = await get_media(media_id)
+    if not media:
+        raise HTTPException(status_code=404, detail="Media not found")
     return media
+
+@router.get("/", response_model=List[MediaInDB])
+async def list_media_endpoint(current_user: Dict = Depends(get_current_user)):
+    media_list = await list_media(current_user["user_id"])
+    return media_list

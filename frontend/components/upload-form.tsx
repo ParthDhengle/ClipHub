@@ -3,6 +3,8 @@
 import type React from "react"
 
 import { useState } from "react"
+import { useRouter } from "next/navigation"; // Import useRouter for redirection
+import { useAuth } from "@/lib/auth-context";
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Textarea } from "@/components/ui/textarea"
@@ -13,9 +15,17 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Upload, ImageIcon, Video, Music, Info, X } from "lucide-react"
 
 export function UploadForm() {
+  const { user, loading } = useAuth();
+  const router = useRouter();
   const [files, setFiles] = useState<File[]>([])
   const [dragActive, setDragActive] = useState(false)
+ 
 
+  // Redirect to login if not authenticated
+  if (!user) {
+    router.push('/login');
+    return null;
+  }
   const handleDrag = (e: React.DragEvent) => {
     e.preventDefault()
     e.stopPropagation()
