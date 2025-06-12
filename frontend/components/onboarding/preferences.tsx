@@ -9,6 +9,8 @@ import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '
 import { Checkbox } from '@/components/ui/checkbox'
 import { useToast } from '@/hooks/use-toast'
 import { saveUserInterests } from '@/lib/utils'
+import { useAuthState } from 'react-firebase-hooks/auth'
+import { auth } from '@/lib/firebase'
 
 const preferencesSchema = z.object({
   preferences: z.array(z.string()).optional(),
@@ -23,6 +25,7 @@ interface PreferencesProps {
 
 export function Preferences({ onNext, onBack }: PreferencesProps) {
   const { toast } = useToast()
+  const [user] = useAuthState(auth)
   const form = useForm<PreferencesFormValues>({
     resolver: zodResolver(preferencesSchema),
     defaultValues: {
@@ -37,14 +40,40 @@ export function Preferences({ onNext, onBack }: PreferencesProps) {
     { id: 'behind-the-scenes', label: 'Behind the Scenes' },
   ]
 
-  const onSubmit = (data: PreferencesFormValues) => {
-    saveUserInterests(data.preferences || [])
-    toast({
-      title: 'Preferences Saved',
-      description: 'Your preferences have been saved successfully.',
-      className: 'bg-green-500 text-white',
-    })
-    onNext()
+  const onSubmit = async (data: PreferencesFormValues) => {
+    if (!user) {
+      toast({
+        title: 'Authentication Error',
+        description: 'You must be logged in to save preferences.',
+        variant: 'destructive',
+      })
+      return
+    }
+    try {
+      const token = await user.getIdToken()
+      const response = await fetch('/api/user/preferences', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`,
+        },
+        body: JSON.stringify({ preferences: data.preferences || [], user_id: user.uid }),
+      })
+      if (!response.ok) throw new Error('Failed to save preferences')
+      saveUserInterests(data.preferences || [])
+      toast({
+        title: 'Preferences Saved',
+        description: 'Your preferences have been saved successfully.',
+        className: 'bg-green-500 text-white',
+      })
+      onNext()
+    } catch (error) {
+      toast({
+        title: 'Error Saving Preferences',
+        description: 'Failed to save preferences. Please try again.',
+        variant: 'destructive',
+      })
+    }
   }
 
   return (
@@ -64,9 +93,9 @@ export function Preferences({ onNext, onBack }: PreferencesProps) {
                       <div key={item.id} className="flex items-center space-x-2">
                         <FormControl>
                           <Checkbox
-                            checked={form.watch('preferences').includes(item.id)}
+                            checked={(form.watch('preferences') || []).includes(item.id)}
                             onCheckedChange={(checked) => {
-                              const current = form.getValues('preferences')
+                              const current = form.getValues('preferences') || []
                               form.setValue(
                                 'preferences',
                                 checked

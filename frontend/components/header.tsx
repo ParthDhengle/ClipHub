@@ -166,11 +166,7 @@ export function Header() {
                     Login
                   </Button>
                 </Link>
-                <Link href="/join">
-                  <Button className="bg-blue-600 text-white hover:bg-blue-700 transition">
-                    Join
-                  </Button>
-                </Link>
+                
               </>
             )}
           </div>

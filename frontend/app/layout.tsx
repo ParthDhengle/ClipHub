@@ -1,5 +1,8 @@
+'use client'
+
+
 import type React from 'react'
-import type { Metadata } from 'next'
+
 import { Inter } from 'next/font/google'
 import './globals.css'
 import { auth } from '@/lib/firebase'
@@ -9,14 +12,6 @@ import { useEffect } from 'react'
 
 const inter = Inter({ subsets: ['latin'] })
 
-export const metadata: Metadata = {
-  title: 'ClipHub - Free Stock Photos, Videos & Music',
-  description: 'The best free stock photos, royalty free images & videos shared by creators.',
-  keywords: ['stock photos', 'free images', 'royalty free', 'stock videos', 'creators', 'free music'],
-  authors: [{ name: 'ClipHub Team' }],
-  viewport: 'width=device-width, initial-scale=1',
-  generator: 'v0.dev',
-}
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
