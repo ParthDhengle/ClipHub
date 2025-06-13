@@ -1,7 +1,6 @@
 from config.database import get_db
 from models.user import UserInDB
 from typing import Dict, Optional
-from pydantic import Document
 
 async def create_user(user_data: Dict) -> UserInDB:
     db = get_db()
