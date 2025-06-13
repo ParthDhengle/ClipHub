@@ -15,6 +15,10 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select"
+import { useToast } from "@/hooks/use-toast"
+import { auth } from "@/lib/firebase"
+import { useAuthState } from "react-firebase-hooks/auth"
+import api from "@/lib/api"
 
 interface MediaItem {
   id: string
@@ -36,87 +40,78 @@ interface MediaItem {
   itemCount?: number
 }
 
-const sampleMedia: MediaItem[] = [
-  {
-    id: "1",
-    title: "Mountain Landscape at Sunset",
-    url: "https://images.unsplash.com/photo-1506905925346-21bda4d32df4",
-    thumbnail: "https://images.unsplash.com/photo-1506905925346-21bda4d32df4?w=400&h=300&fit=crop",
-    tags: ["nature", "landscape", "sunset", "mountains"],
-    likes: 245,
-    views: 1250,
-    downloads: 89,
-    creator: { name: "Alex Chen", avatar: "https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?w=32&h=32&fit=crop&crop=face" },
-    category: "Nature",
-    isPremium: false,
-    type: "photo"
-  },
-  {
-    id: "2",
-    title: "Modern Office Space",
-    url: "https://images.unsplash.com/photo-1497366216548-37526070297c",
-    thumbnail: "https://images.unsplash.com/photo-1497366216548-37526070297c?w=400&h=300&fit=crop",
-    tags: ["business", "office", "modern", "workspace"],
-    likes: 167,
-    views: 890,
-    downloads: 56,
-    creator: { name: "Sarah Kim", avatar: "https://images.unsplash.com/photo-1494790108755-2616b612b786?w=32&h=32&fit=crop&crop=face" },
-    category: "Business",
-    isPremium: true,
-    type: "photo"
-  },
-  {
-    id: "3",
-    title: "Chill Lo-Fi Track",
-    url: "https://example.com/audio/lofi.mp3",
-    thumbnail: "https://images.unsplash.com/photo-1453728013993-6d66e9c9123a?w=400&h=300&fit=crop",
-    tags: ["lofi", "chill", "music", "relax"],
-    likes: 134,
-    views: 672,
-    downloads: 43,
-    creator: { name: "Mike Johnson", avatar: "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=32&h=32&fit=crop&crop=face" },
-    category: "Music",
-    isPremium: false,
-    type: "music",
-    duration: "3:45"
-  },
-  {
-    id: "4",
-    title: "Nature Collection",
-    url: "https://example.com/collection/nature",
-    thumbnail: "https://images.unsplash.com/photo-1557804506-669a67965ba0?w=400&h=300&fit=crop",
-    tags: ["nature", "photos", "videos", "outdoors"],
-    likes: 298,
-    views: 1456,
-    downloads: 112,
-    creator: { name: "Emma Davis", avatar: "https://images.unsplash.com/photo-1438761681033-6461ffad8d80?w=32&h=32&fit=crop&crop=face" },
-    category: "Nature",
-    isPremium: true,
-    type: "collection",
-    itemCount: 12
-  }
-]
-
 export function MediaDetailPage() {
   const router = useRouter()
   const { id } = useParams()
   const [media, setMedia] = useState<MediaItem | null>(null)
-  const [liked, setLiked] = useState(false)
   const [suggestedMedia, setSuggestedMedia] = useState<MediaItem[]>([])
+  const [liked, setLiked] = useState(false)
+  const [loading, setLoading] = useState(true)
+  const { toast } = useToast()
+  const [user, userLoading] = useAuthState(auth)
 
   useEffect(() => {
-    const item = sampleMedia.find(m => m.id === id)
-    setMedia(item || null)
-    if (item) {
-      const suggestions = sampleMedia
-        .filter(m => m.category === item.category && m.id !== item.id)
-        .slice(0, 4)
-      setSuggestedMedia(suggestions)
-    }
-  }, [id])
+    const fetchMedia = async () => {
+      setLoading(true)
+      try {
+        const idToken = user ? await user.getIdToken() : null
+        const headers = idToken ? { Authorization: `Bearer ${idToken}` } : {}
+        const response = await api.get(`/api/media/${id}`, { headers })
+        setMedia(response.data)
 
-  const handleLike = () => {
-    setLiked(prev => !prev)
+        // Fetch suggested media
+        const suggestedResponse = await api.get(`/api/media?category=${response.data.category}&excludeId=${id}`, { headers })
+        setSuggestedMedia(suggestedResponse.data.items.slice(0, 4))
+      } catch (error: any) {
+        toast({
+          title: "Error",
+          description: error.response?.data?.detail || "Media not found",
+          variant: "destructive",
+        })
+        setMedia(null)
+      } finally {
+        setLoading(false)
+      }
+    }
+
+    if (!userLoading) fetchMedia()
+  }, [id, user, userLoading, toast])
+
+  const handleLike = async () => {
+    if (!user) {
+      toast({
+        title: "Unauthorized",
+        description: "Please log in to like media",
+        variant: "destructive",
+      })
+      router.push('/login')
+      return
+    }
+
+    try {
+      const idToken = await user.getIdToken()
+      if (liked) {
+        await api.post(`/api/media/${id}/unlike`, {}, {
+          headers: { Authorization: `Bearer ${idToken}` }
+        })
+      } else {
+        await api.post(`/api/media/${id}/like`, {}, {
+          headers: { Authorization: `Bearer ${idToken}` }
+        })
+      }
+      setLiked(prev => !prev)
+      setMedia(prev => prev ? { ...prev, likes: prev.likes + (liked ? -1 : 1) } : prev)
+    } catch (error: any) {
+      toast({
+        title: "Error",
+        description: error.response?.data?.detail || "Failed to update like",
+        variant: "destructive",
+      })
+    }
+  }
+
+  if (loading || userLoading) {
+    return <div className="min-h-screen flex items-center justify-center">Loading...</div>
   }
 
   if (!media) {
@@ -213,7 +208,6 @@ export function MediaDetailPage() {
       </div>
       <div className="space-y-4">
         <h2 className="text-xl md:text-2xl font-semibold">Suggested {media.type === "collection" ? "Collections" : `${media.type.charAt(0).toUpperCase() + media.type.slice(1)}s`}</h2>
-       フォーム
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
           {suggestedMedia.map((item) => (
             <Card key={item.id} className="group overflow-hidden hover:shadow-lg transition-shadow">
@@ -235,13 +229,16 @@ export function MediaDetailPage() {
                       size="sm"
                       variant="secondary"
                       className="h-8 w-8 p-0"
-                      onClick={() => setLiked(prev => !prev)}
+                      onClick={(e) => {
+                        e.stopPropagation()
+                        handleLike(item.id)
+                      }}
                     >
                       <Heart 
                         className={`h-4 w-4 ${liked ? 'fill-red-500 text-red-500' : ''}`} 
                       />
                     </Button>
-                    <Button size="sm" variant="secondary" className="h-8 w-8 p-0">
+                    <Button size="sm" variant="secondary" className="h-8 w-8 p-0" onClick={(e) => e.stopPropagation()}>
                       <Download className="h-4 w-4" />
                     </Button>
                   </div>

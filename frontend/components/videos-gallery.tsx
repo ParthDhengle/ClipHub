@@ -66,66 +66,6 @@ const sampleVideos: Video[] = [
     resolution: "1080p",
     fps: 30
   },
-  {
-    id: "3",
-    title: "City Traffic Time Lapse",
-    thumbnail: "https://images.unsplash.com/photo-1449824913935-59a10b8d2000?w=400&h=300&fit=crop",
-    duration: "0:20",
-    tags: ["city", "traffic", "timelapse", "urban"],
-    likes: 267,
-    views: 1834,
-    downloads: 94,
-    creator: { name: "Urban Lens", avatar: "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=32&h=32&fit=crop&crop=face" },
-    category: "Urban",
-    isPremium: false,
-    resolution: "4K",
-    fps: 24
-  },
-  {
-    id: "4",
-    title: "Coffee Brewing Process",
-    thumbnail: "https://images.unsplash.com/photo-1453728013993-6d66e9c9123a?w=400&h=300&fit=crop",
-    duration: "0:25",
-    tags: ["coffee", "brewing", "lifestyle", "morning"],
-    likes: 156,
-    views: 987,
-    downloads: 52,
-    creator: { name: "Lifestyle Studio", avatar: "https://images.unsplash.com/photo-1438761681033-6461ffad8d80?w=32&h=32&fit=crop&crop=face" },
-    category: "Lifestyle",
-    isPremium: true,
-    resolution: "1080p",
-    fps: 30
-  },
-  {
-    id: "5",
-    title: "Abstract Light Patterns",
-    thumbnail: "https://images.unsplash.com/photo-1557804506-669a67965ba0?w=400&h=300&fit=crop",
-    duration: "0:12",
-    tags: ["abstract", "light", "motion", "graphics"],
-    likes: 298,
-    views: 2456,
-    downloads: 143,
-    creator: { name: "Motion Graphics", avatar: "https://images.unsplash.com/photo-1544725176-7c40e5a71c5e?w=32&h=32&fit=crop&crop=face" },
-    category: "Abstract",
-    isPremium: true,
-    resolution: "4K",
-    fps: 60
-  },
-  {
-    id: "6",
-    title: "Mountain Hiking Adventure",
-    thumbnail: "https://images.unsplash.com/photo-1506905925346-21bda4d32df4?w=400&h=300&fit=crop",
-    duration: "0:45",
-    tags: ["adventure", "hiking", "mountains", "outdoor"],
-    likes: 412,
-    views: 3124,
-    downloads: 198,
-    creator: { name: "Adventure Co", avatar: "https://images.unsplash.com/photo-1500648767791-00dcc994a43e?w=32&h=32&fit=crop&crop=face" },
-    category: "Adventure",
-    isPremium: false,
-    resolution: "4K",
-    fps: 30
-  }
 ]
 
 

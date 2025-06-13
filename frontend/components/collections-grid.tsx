@@ -1,4 +1,3 @@
-
 "use client"
 
 import { useRouter } from "next/navigation"
@@ -16,11 +15,16 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select"
+import { useToast } from "@/hooks/use-toast"
+import { auth, db } from "@/lib/firebase"
+import { useAuthState } from "react-firebase-hooks/auth"
+import api from "@/lib/api"
+import { collection, onSnapshot } from "firebase/firestore"
 
 interface Collection {
   id: string
   title: string
-  thumbnail: string // Cover image for the collection
+  thumbnail: string
   themes: string[]
   itemCount: number
   views: number
@@ -34,95 +38,58 @@ interface Collection {
   isPremium: boolean
 }
 
-const sampleCollections: Collection[] = [
-  {
-    id: "1",
-    title: "Nature's Beauty",
-    thumbnail: "https://images.unsplash.com/photo-1506905925346-21bda4d32df4?w=400&h=300&fit=crop",
-    themes: ["nature", "landscapes", "wilderness"],
-    itemCount: 25,
-    views: 1345,
-    likes: 210,
-    downloads: 89,
-    creator: { name: "Alex Chen", avatar: "https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?w=32&h=32&fit=crop&crop=face" },
-    category: "Nature",
-    isPremium: false
-  },
-  {
-    id: "2",
-    title: "Urban Vibes",
-    thumbnail: "https://images.unsplash.com/photo-1449824913935-59a10b8d2000?w=400&h=300&fit=camp",
-    themes: ["city", "architecture", "urban"],
-    itemCount: 18,
-    views: 987,
-    likes: 165,
-    downloads: 62,
-    creator: { name: "Sarah Kim", avatar: "https://images.unsplash.com/photo-1494790108755-2616b612b786?w=32&h=32&fit=crop&crop=face" },
-    category: "Urban",
-    isPremium: true
-  },
-  {
-    id: "3",
-    title: "Cinematic Soundscapes",
-    thumbnail: "https://images.unsplash.com/photo-1579547945413-497f067239a1?w=400&h=300&fit=crop",
-    themes: ["music", "cinematic", "epic"],
-    itemCount: 12,
-    views: 654,
-    likes: 134,
-    downloads: 45,
-    creator: { name: "Mike Johnson", avatar: "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=32&h=32&fit=crop&crop=face" },
-    category: "Music",
-    isPremium: false
-  },
-  {
-    id: "4",
-    title: "Abstract Art",
-    thumbnail: "https://images.unsplash.com/photo-1557804506-669a67965ba0?w=400&h=300&fit=crop",
-    themes: ["abstract", "patterns", "design"],
-    itemCount: 20,
-    views: 1123,
-    likes: 198,
-    downloads: 76,
-    creator: { name: "Emma Davis", avatar: "https://images.unsplash.com/photo-1438761681033-6461ffad8d80?w=32&h=32&fit=crop&crop=face" },
-    category: "Abstract",
-    isPremium: true
-  },
-  {
-    id: "5",
-    title: "Food & Cuisine",
-    thumbnail: "https://images.unsplash.com/photo-1540420773420-3366772f4999?w=400&h=300&fit=crop",
-    themes: ["food", "cuisine", "cooking"],
-    itemCount: 15,
-    views: 876,
-    likes: 145,
-    downloads: 58,
-    creator: { name: "Lisa Wong", avatar: "https://images.unsplash.com/photo-1544725176-7c40e5a71c5e?w=32&h=32&fit=crop&crop=face" },
-    category: "Food",
-    isPremium: false
-  },
-  {
-    id: "6",
-    title: "Travel Adventures",
-    thumbnail: "https://images.unsplash.com/photo-1507525428034-b723cf961d3e?w=400&h=300&fit=crop",
-    themes: ["travel", "adventure", "destinations"],
-    itemCount: 22,
-    views: 1456,
-    likes: 234,
-    downloads: 92,
-    creator: { name: "David Lee", avatar: "https://images.unsplash.com/photo-1500648767791-00dcc994a43e?w=32&h=32&fit=crop&crop=face" },
-    category: "Travel",
-    isPremium: true
-  }
-]
-
 export function CollectionsGrid() {
   const router = useRouter()
-  const [collections, setCollections] = useState<Collection[]>(sampleCollections)
+  const [collections, setCollections] = useState<Collection[]>([])
   const [searchTerm, setSearchTerm] = useState("")
   const [selectedCategory, setSelectedCategory] = useState("All")
   const [likedCollections, setLikedCollections] = useState<Set<string>>(new Set())
+  const [loading, setLoading] = useState(true)
+  const { toast } = useToast()
+  const [user, userLoading] = useAuthState(auth)
 
   const categories = ["All", "Nature", "Urban", "Music", "Abstract", "Food", "Travel"]
+
+  useEffect(() => {
+    if (userLoading) return
+
+    // Optional: Real-time Firestore listener
+    const unsubscribe = onSnapshot(collection(db, "collections"), (snapshot) => {
+      const fetchedCollections = snapshot.docs.map(doc => ({
+        id: doc.id,
+        ...doc.data(),
+      } as Collection))
+      setCollections(fetchedCollections)
+      setLoading(false)
+    }, (error) => {
+      toast({
+        title: "Error",
+        description: "Failed to load collections",
+        variant: "destructive",
+      })
+      setLoading(false)
+    })
+
+    // Fallback: Fetch from backend
+    const fetchCollections = async () => {
+      try {
+        const response = await api.get('/api/collections')
+        setCollections(response.data.items)
+      } catch (error: any) {
+        toast({
+          title: "Error",
+          description: error.response?.data?.detail || "Failed to load collections",
+          variant: "destructive",
+        })
+      } finally {
+        setLoading(false)
+      }
+    }
+
+    fetchCollections()
+
+    return () => unsubscribe()
+  }, [userLoading, toast])
 
   const filteredCollections = collections.filter(collection => {
     const matchesSearch = collection.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -131,14 +98,45 @@ export function CollectionsGrid() {
     return matchesSearch && matchesCategory
   })
 
-  const handleLike = (collectionId: string) => {
-    const newLikedCollections = new Set(likedCollections)
-    if (newLikedCollections.has(collectionId)) {
-      newLikedCollections.delete(collectionId)
-    } else {
-      newLikedCollections.add(collectionId)
+  const handleLike = async (collectionId: string) => {
+    if (!user) {
+      toast({
+        title: "Unauthorized",
+        description: "Please log in to like collections",
+        variant: "destructive",
+      })
+      router.push('/login')
+      return
     }
-    setLikedCollections(newLikedCollections)
+
+    try {
+      const idToken = await user.getIdToken()
+      const newLikedCollections = new Set(likedCollections)
+      if (newLikedCollections.has(collectionId)) {
+        newLikedCollections.delete(collectionId)
+        // Call backend to unlike
+        await api.post(`/api/collections/${collectionId}/unlike`, {}, {
+          headers: { Authorization: `Bearer ${idToken}` }
+        })
+      } else {
+        newLikedCollections.add(collectionId)
+        // Call backend to like
+        await api.post(`/api/collections/${collectionId}/like`, {}, {
+          headers: { Authorization: `Bearer ${idToken}` }
+        })
+      }
+      setLikedCollections(newLikedCollections)
+    } catch (error: any) {
+      toast({
+        title: "Error",
+        description: error.response?.data?.detail || "Failed to update like",
+        variant: "destructive",
+      })
+    }
+  }
+
+  if (loading) {
+    return <div className="min-h-screen flex items-center justify-center">Loading...</div>
   }
 
   return (

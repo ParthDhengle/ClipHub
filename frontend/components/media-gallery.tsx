@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { Card } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
@@ -19,198 +19,120 @@ import {
   Grid3X3,
   List,
 } from "lucide-react"
+import { useToast } from "@/hooks/use-toast"
+import { auth, db } from "@/lib/firebase"
+import { useAuthState } from "react-firebase-hooks/auth"
+import api from "@/lib/api"
+import { collection, onSnapshot } from "firebase/firestore"
+import { useRouter } from "next/navigation"
+
+interface MediaItem {
+  id: string
+  title: string
+  url: string
+  thumbnail: string
+  type: string
+  creator: string
+  downloads: string
+  likes: string
+  views: string
+  avatar: string
+  category: string
+  duration?: string
+}
 
 export function MediaGallery() {
   const [viewMode, setViewMode] = useState("grid")
   const [hoveredItem, setHoveredItem] = useState<number | null>(null)
+  const [mediaItems, setMediaItems] = useState<MediaItem[]>([])
+  const [loading, setLoading] = useState(true)
+  const { toast } = useToast()
+  const [user, userLoading] = useAuthState(auth)
+  const router = useRouter()
+  const [activeTab, setActiveTab] = useState("all")
 
-  // Generate a large collection of media items
-const mediaItems = [
-  {
-    id: 1,
-    type: "photo",
-    title: "Mountain Sunset",
-    creator: "Alex Johnson",
-    downloads: "12.5K",
-    likes: "3.2K",
-    views: "45K",
-    image: "/a11.jpg",
-    avatar: "/placeholder.svg?height=40&width=40",
-    category: "Nature",
-  },
-  {
-    id: 2,
-    type: "photo",
-    title: "City Architecture",
-    creator: "Sarah Chen",
-    downloads: "8.7K",
-    likes: "2.1K",
-    views: "32K",
-    image: "/a12.jpg",
-    avatar: "/placeholder.svg?height=40&width=40",
-    category: "Architecture",
-  },
-  {
-    id: 3,
-    type: "photo",
-    title: "Coffee Shop",
-    creator: "Maria Garcia",
-    downloads: "15.2K",
-    likes: "4.8K",
-    views: "67K",
-    image: "/a13.jpg",
-    avatar: "/placeholder.svg?height=40&width=40",
-    category: "Food",
-  },
-  {
-    id: 4,
-    type: "video",
-    title: "Ocean Waves",
-    creator: "David Kim",
-    downloads: "6.3K",
-    likes: "1.9K",
-    views: "28K",
-    image: "/a14.jpg",
-    avatar: "/placeholder.svg?height=40&width=40",
-    category: "Nature",
-    duration: "0:45",
-  },
-  {
-    id: 5,
-    type: "photo",
-    title: "Forest Path",
-    creator: "Emma Wilson",
-    downloads: "9.8K",
-    likes: "2.7K",
-    views: "38K",
-    image: "/a15.jpg",
-    avatar: "/placeholder.svg?height=40&width=40",
-    category: "Nature",
-  },
-  {
-    id: 6,
-    type: "photo",
-    title: "Modern Office",
-    creator: "John Smith",
-    downloads: "11.2K",
-    likes: "3.5K",
-    views: "42K",
-    image: "/a16.jpg",
-    avatar: "/placeholder.svg?height=40&width=40",
-    category: "Business",
-  },
-  {
-    id: 7,
-    type: "video",
-    title: "City Traffic",
-    creator: "Lisa Brown",
-    downloads: "7.1K",
-    likes: "2.3K",
-    views: "31K",
-    image: "/a17.jpg",
-    avatar: "/placeholder.svg?height=40&width=40",
-    category: "Urban",
-    duration: "1:20",
-  },
-  {
-    id: 8,
-    type: "photo",
-    title: "Flower Garden",
-    creator: "Tom Davis",
-    downloads: "13.6K",
-    likes: "4.1K",
-    views: "52K",
-    image: "/a18.jpg",
-    avatar: "/placeholder.svg?height=40&width=40",
-    category: "Nature",
-  },
-  {
-    id: 9,
-    type: "photo",
-    title: "Street Art",
-    creator: "Anna Lee",
-    downloads: "5.9K",
-    likes: "1.8K",
-    views: "25K",
-    image: "/z16.jpg",
-    avatar: "/placeholder.svg?height=40&width=40",
-    category: "Art",
-  },
-  {
-    id: 10,
-    type: "video",
-    title: "Cooking Process",
-    creator: "Chef Marco",
-    downloads: "8.4K",
-    likes: "2.6K",
-    views: "35K",
-    image: "/a11.jpg",
-    avatar: "/placeholder.svg?height=40&width=40",
-    category: "Food",
-    duration: "2:15",
-  },
-  {
-    id: 11,
-    type: "photo",
-    title: "Beach Sunset",
-    creator: "Ocean Lover",
-    downloads: "16.8K",
-    likes: "5.2K",
-    views: "71K",
-    image: "/a12.jpg",
-    avatar: "/placeholder.svg?height=40&width=40",
-    category: "Nature",
-  },
-  {
-    id: 12,
-    type: "photo",
-    title: "Technology Setup",
-    creator: "Tech Guru",
-    downloads: "10.3K",
-    likes: "3.1K",
-    views: "44K",
-    image: "/a13.jpg",
-    avatar: "/placeholder.svg?height=40&width=40",
-    category: "Technology",
-  },
-  {
-    id: 13,
-    type: "video",
-    title: "Workout Session",
-    creator: "Fitness Pro",
-    downloads: "9.2K",
-    likes: "2.8K",
-    views: "39K",
-    image: "/a14.jpg",
-    avatar: "/placeholder.svg?height=40&width=40",
-    category: "Sports",
-    duration: "3:30",
-  },
-  {
-    id: 14,
-    type: "photo",
-    title: "Fashion Portrait",
-    creator: "Style Maven",
-    downloads: "12.7K",
-    likes: "3.9K",
-    views: "48K",
-    image: "/a15.jpg",
-    avatar: "/placeholder.svg?height=40&width=40",
-    category: "Fashion",
-  },
-  {
-    id: 15,
-    type: "photo",
-    title: "Pet Photography",
-    creator: "Animal Friend",
-    downloads: "14.1K",
-    likes: "4.3K",
-    views: "56K",
-    image: "/a16.jpg",
-    avatar: "/placeholder.svg?height=40&width=40",
-    category: "Animals",
-  },
-];
+  const fetchMedia = async (type?: string) => {
+    setLoading(true)
+    try {
+      const queryParams = type && type !== "all" ? `?type=${type}` : ''
+      const response = await api.get(`/api/media${queryParams}`)
+      setMediaItems(response.data.items.map((item: any) => ({
+        id: item.id,
+        title: item.title,
+        url: item.url,
+        thumbnail: item.thumbnail,
+        type: item.type,
+        creator: item.creator.name,
+        downloads: item.downloads.toLocaleString(),
+        likes: item.likes.toLocaleString(),
+        views: item.views.toLocaleString(),
+        avatar: item.creator.avatar,
+        category: item.category,
+        duration: item.duration,
+      })))
+    } catch (error: any) {
+      toast({
+        title: "Error",
+        description: error.response?.data?.detail || "Failed to load media",
+        variant: "destructive",
+      })
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  useEffect(() => {
+    if (userLoading) return
+
+    // Optional: Real-time Firestore listener
+    const unsubscribe = onSnapshot(collection(db, "media"), (snapshot) => {
+      const fetchedMedia = snapshot.docs.map(doc => ({
+        id: doc.id,
+        ...doc.data(),
+      } as MediaItem))
+      setMediaItems(fetchedMedia)
+      setLoading(false)
+    }, (error) => {
+      toast({
+        title: "Error",
+        description: "Failed to load media",
+        variant: "destructive",
+      })
+      setLoading(false)
+    })
+
+    fetchMedia(activeTab)
+
+    return () => unsubscribe()
+  }, [userLoading, activeTab, toast])
+
+  const handleLike = async (id: string) => {
+    if (!user) {
+      toast({
+        title: "Unauthorized",
+        description: "Please log in to like media",
+        variant: "destructive",
+      })
+      router.push('/login')
+      return
+    }
+
+    try {
+      const idToken = await user.getIdToken()
+      await api.post(`/api/media/${id}/like`, {}, {
+        headers: { Authorization: `Bearer ${idToken}` }
+      })
+      setMediaItems(prev => prev.map(item =>
+        item.id === id ? { ...item, likes: (parseInt(item.likes.replace(/,/g, '')) + 1).toLocaleString() } : item
+      ))
+    } catch (error: any) {
+      toast({
+        title: "Error",
+        description: error.response?.data?.detail || "Failed to like media",
+        variant: "destructive",
+      })
+    }
+  }
 
   const getTypeIcon = (type: string) => {
     switch (type) {
@@ -221,6 +143,10 @@ const mediaItems = [
       default:
         return <ImageIcon className="h-4 w-4" />
     }
+  }
+
+  if (loading || userLoading) {
+    return <div className="min-h-screen flex items-center justify-center">Loading...</div>
   }
 
   return (
@@ -260,11 +186,11 @@ const mediaItems = [
         </div>
 
         {/* Tabs */}
-        <Tabs defaultValue="all" className="mb-8">
+        <Tabs value={activeTab} onValueChange={setActiveTab} className="mb-8">
           <TabsList className="grid w-full grid-cols-4 max-w-md">
             <TabsTrigger value="all">All</TabsTrigger>
-            <TabsTrigger value="photos">Photos</TabsTrigger>
-            <TabsTrigger value="videos">Videos</TabsTrigger>
+            <TabsTrigger value="photo">Photos</TabsTrigger>
+            <TabsTrigger value="video">Videos</TabsTrigger>
             <TabsTrigger value="audio">Audio</TabsTrigger>
           </TabsList>
 
@@ -277,10 +203,11 @@ const mediaItems = [
                   className="break-inside-avoid overflow-hidden group cursor-pointer transition-all duration-300 hover:shadow-xl"
                   onMouseEnter={() => setHoveredItem(index)}
                   onMouseLeave={() => setHoveredItem(null)}
+                  onClick={() => router.push(`/${item.type}s/${item.id}`)}
                 >
                   <div className="relative">
                     <img
-                      src={item.image || "/placeholder.svg"}
+                      src={item.thumbnail || "/placeholder.svg"}
                       alt={item.title}
                       className="w-full object-cover transition-transform duration-300 group-hover:scale-105"
                       style={{ height: "auto" }}
@@ -342,7 +269,7 @@ const mediaItems = [
                             </Avatar>
                             <span className="text-white text-sm font-medium">{item.creator}</span>
                           </div>
-                          <Button size="sm" className="bg-white text-black hover:bg-gray-100">
+                          <Button size="sm" className="bg-white text-black hover:bg-gray-100" onClick={(e) => e.stopPropagation()}>
                             <Download className="h-3 w-3 mr-1" />
                             Free
                           </Button>
@@ -358,10 +285,10 @@ const mediaItems = [
                         {item.category}
                       </Badge>
                       <div className="flex items-center space-x-1">
-                        <Button variant="ghost" size="icon" className="h-6 w-6">
+                        <Button variant="ghost" size="icon" className="h-6 w-6" onClick={(e) => { e.stopPropagation(); handleLike(item.id); }}>
                           <Heart className="h-3 w-3" />
                         </Button>
-                        <Button variant="ghost" size="icon" className="h-6 w-6">
+                        <Button variant="ghost" size="icon" className="h-6 w-6" onClick={(e) => e.stopPropagation()}>
                           <Download className="h-3 w-3" />
                         </Button>
                       </div>
@@ -373,18 +300,19 @@ const mediaItems = [
             </div>
           </TabsContent>
 
-          <TabsContent value="photos">
+          <TabsContent value="photo">
             <div className="columns-1 sm:columns-2 lg:columns-3 xl:columns-4 gap-4 space-y-4">
               {mediaItems
                 .filter((item) => item.type === "photo")
-                .map((item, index) => (
+                .map((item) => (
                   <Card
                     key={item.id}
                     className="break-inside-avoid overflow-hidden group cursor-pointer transition-all duration-300 hover:shadow-xl"
+                    onClick={() => router.push(`/photos/${item.id}`)}
                   >
                     <div className="relative">
                       <img
-                        src={item.image || "/placeholder.svg"}
+                        src={item.thumbnail || "/placeholder.svg"}
                         alt={item.title}
                         className="w-full object-cover transition-transform duration-300 group-hover:scale-105"
                       />
@@ -398,7 +326,7 @@ const mediaItems = [
                               </Avatar>
                               <span className="text-white text-sm">{item.creator}</span>
                             </div>
-                            <Button size="sm" className="bg-white text-black">
+                            <Button size="sm" className="bg-white text-black" onClick={(e) => e.stopPropagation()}>
                               <Download className="h-3 w-3 mr-1" />
                               Free
                             </Button>
@@ -417,18 +345,19 @@ const mediaItems = [
             </div>
           </TabsContent>
 
-          <TabsContent value="videos">
+          <TabsContent value="video">
             <div className="columns-1 sm:columns-2 lg:columns-3 xl:columns-4 gap-4 space-y-4">
               {mediaItems
                 .filter((item) => item.type === "video")
-                .map((item, index) => (
+                .map((item) => (
                   <Card
                     key={item.id}
                     className="break-inside-avoid overflow-hidden group cursor-pointer transition-all duration-300 hover:shadow-xl"
+                    onClick={() => router.push(`/videos/${item.id}`)}
                   >
                     <div className="relative">
                       <img
-                        src={item.image || "/placeholder.svg"}
+                        src={item.thumbnail || "/placeholder.svg"}
                         alt={item.title}
                         className="w-full object-cover transition-transform duration-300 group-hover:scale-105"
                       />
@@ -454,10 +383,34 @@ const mediaItems = [
           </TabsContent>
 
           <TabsContent value="audio">
-            <div className="text-center py-12">
-              <Music className="h-16 w-16 mx-auto text-muted-foreground mb-4" />
-              <h3 className="text-lg font-semibold mb-2">Audio Content</h3>
-              <p className="text-muted-foreground">Discover royalty-free music and sound effects</p>
+            <div className="columns-1 sm:columns-2 lg:columns-3 xl:columns-4 gap-4 space-y-4">
+              {mediaItems
+                .filter((item) => item.type === "audio")
+                .map((item) => (
+                  <Card
+                    key={item.id}
+                    className="break-inside-avoid overflow-hidden group cursor-pointer transition-all duration-300 hover:shadow-xl"
+                    onClick={() => router.push(`/music/${item.id}`)}
+                  >
+                    <div className="relative">
+                      <img
+                        src={item.thumbnail || "/placeholder.svg"}
+                        alt={item.title}
+                        className="w-full object-cover transition-transform duration-300 group-hover:scale-105"
+                      />
+                      <Badge className="absolute top-3 left-3 bg-black/70 text-white">
+                        <Music className="h-3 w-3 mr-1" />
+                        {item.duration}
+                      </Badge>
+                    </div>
+                    <div className="p-4">
+                      <Badge variant="outline" className="text-xs mb-2">
+                        {item.category}
+                      </Badge>
+                      <h3 className="font-medium text-sm">{item.title}</h3>
+                    </div>
+                  </Card>
+                ))}
             </div>
           </TabsContent>
         </Tabs>

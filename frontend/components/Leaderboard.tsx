@@ -5,6 +5,10 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { Badge } from "@/components/ui/badge"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Trophy, User } from "lucide-react"
+import { useToast } from "@/hooks/use-toast"
+import { auth } from "@/lib/firebase"
+import { useAuthState } from "react-firebase-hooks/auth"
+import api from "@/lib/api"
 
 interface Creator {
   id: string
@@ -18,26 +22,43 @@ interface Creator {
   isCurrentUser: boolean
 }
 
-const sampleCreators: Creator[] = [
-  { id: "1", name: "Alex Chen", avatar: "https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?w=32&h=32&fit=crop&crop=face", points: 1250, rank: 1, challengesWon: 15, photosLiked: 320, followers: 915, isCurrentUser: false },
-  { id: "2", name: "Sarah Kim", avatar: "https://images.unsplash.com/photo-1494790108755-2616b612b786?w=32&h=32&fit=crop&crop=face", points: 1120, rank: 2, challengesWon: 12, photosLiked: 280, followers: 840, isCurrentUser: false },
-  { id: "3", name: "Mike Johnson", avatar: "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=32&h=32&fit=crop&crop=face", points: 980, rank: 3, challengesWon: 10, photosLiked: 245, followers: 735, isCurrentUser: false },
-  { id: "4", name: "Emma Davis", avatar: "https://images.unsplash.com/photo-1438761681033-6461ffad8d80?w=32&h=32&fit=crop&crop=face", points: 850, rank: 4, challengesWon: 8, photosLiked: 210, followers: 640, isCurrentUser: false },
-  { id: "5", name: "You", avatar: "https://images.unsplash.com/photo-1544725176-7c40e5a71c5e?w=32&h=32&fit=crop&crop=face", points: 720, rank: 5, challengesWon: 7, photosLiked: 190, followers: 550, isCurrentUser: true },
-  { id: "6", name: "Ryan Kim", avatar: "https://images.unsplash.com/photo-1500648767791-00dcc994a43e?w=32&h=32&fit=crop&crop=face", points: 680, rank: 6, challengesWon: 6, photosLiked: 175, followers: 520, isCurrentUser: false },
-  { id: "7", name: "Lily Chen", avatar: "https://images.unsplash.com/photo-1544725176-7c40e5a71c5e?w=32&h=32&fit=crop&crop=face", points: 620, rank: 7, challengesWon: 5, photosLiked: 160, followers: 480, isCurrentUser: false },
-  { id: "8", name: "Mark Davis", avatar: "https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?w=32&h=32&fit=crop&crop=face", points: 580, rank: 8, challengesWon: 4, photosLiked: 145, followers: 450, isCurrentUser: false },
-]
-
 export function Leaderboard() {
-  const [creators, setCreators] = useState<Creator[]>(sampleCreators)
-  const currentUser = creators.find(creator => creator.isCurrentUser)
+  const [creators, setCreators] = useState<Creator[]>([])
+  const [loading, setLoading] = useState(true)
+  const { toast } = useToast()
+  const [user, userLoading] = useAuthState(auth)
 
-  // Simulate fetching data and sorting by points
   useEffect(() => {
-    const sortedCreators = [...sampleCreators].sort((a, b) => b.points - a.points)
-    setCreators(sortedCreators)
-  }, [])
+    const fetchLeaderboard = async () => {
+      setLoading(true)
+      try {
+        const idToken = user ? await user.getIdToken() : null
+        const headers = idToken ? { Authorization: `Bearer ${idToken}` } : {}
+        const response = await api.get('/api/leaderboard', { headers })
+        const leaderboardData = response.data.items.map((item: any) => ({
+          ...item,
+          isCurrentUser: user ? item.id === user.uid : false,
+        }))
+        setCreators(leaderboardData)
+      } catch (error: any) {
+        toast({
+          title: "Error",
+          description: error.response?.data?.detail || "Failed to load leaderboard",
+          variant: "destructive",
+        })
+      } finally {
+        setLoading(false)
+      }
+    }
+
+    if (!userLoading) fetchLeaderboard()
+  }, [user, userLoading, toast])
+
+  if (loading || userLoading) {
+    return <div className="min-h-screen flex items-center justify-center">Loading...</div>
+  }
+
+  const currentUser = creators.find(creator => creator.isCurrentUser)
 
   return (
     <div className="container mx-auto px-4 sm:px-6 lg:px-8 py-8">

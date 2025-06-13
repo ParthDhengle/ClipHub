@@ -10,6 +10,8 @@ import { Input } from '@/components/ui/input'
 import { useToast } from '@/hooks/use-toast'
 import { auth } from '@/lib/firebase'
 import { signInWithEmailAndPassword, createUserWithEmailAndPassword, signInWithPopup, GoogleAuthProvider } from 'firebase/auth'
+import { useRouter } from 'next/navigation'
+import api from "@/lib/api"
 
 // Define the form schema with zod
 const loginSchema = z.object({
@@ -23,6 +25,7 @@ type LoginFormValues = z.infer<typeof loginSchema>
 export function UserLogin() {
   const { toast } = useToast()
   const [isSignUp, setIsSignUp] = useState(false)
+  const router = useRouter()
   const form = useForm<LoginFormValues>({
     resolver: zodResolver(loginSchema),
     defaultValues: {
@@ -34,27 +37,52 @@ export function UserLogin() {
 
   const onSubmit = async (data: LoginFormValues) => {
     try {
+      let userCredential;
       if (isSignUp) {
-        // Sign up with email and password
-        await createUserWithEmailAndPassword(auth, data.email, data.password)
+        // Sign up with Firebase
+        userCredential = await createUserWithEmailAndPassword(auth, data.email, data.password)
+        const idToken = await userCredential.user.getIdToken()
+
+        // Call backend to create user in Firestore
+        const response = await api.post('/api/auth/signup', {
+          email: data.email,
+          name: data.name || '',
+          firebaseUid: userCredential.user.uid,
+        }, {
+          headers: { Authorization: `Bearer ${idToken}` }
+        })
+
+        localStorage.setItem('jwt', response.data.token)
         toast({
           title: 'Sign Up Successful',
           description: 'Welcome to ClipHub! Let’s set up your preferences.',
           className: 'bg-green-500 text-white',
         })
+        router.push('/onboarding')
       } else {
-        // Sign in with email and password
-        await signInWithEmailAndPassword(auth, data.email, data.password)
+        // Sign in with Firebase
+        userCredential = await signInWithEmailAndPassword(auth, data.email, data.password)
+        const idToken = await userCredential.user.getIdToken()
+
+        // Call backend to get JWT
+        const response = await api.post('/api/auth/login', {
+          email: data.email,
+        }, {
+          headers: { Authorization: `Bearer ${idToken}` }
+        })
+
+        localStorage.setItem('jwt', response.data.token)
         toast({
           title: 'Login Successful',
           description: 'Welcome back to ClipHub!',
           className: 'bg-green-500 text-white',
         })
+        router.push('/dashboard')
       }
     } catch (error: any) {
       toast({
         title: isSignUp ? 'Sign Up Failed' : 'Login Failed',
-        description: error.message || 'An error occurred. Please try again.',
+        description: error.response?.data?.detail || error.message || 'An error occurred. Please try again.',
         variant: 'destructive',
       })
     }
@@ -63,16 +91,29 @@ export function UserLogin() {
   const handleGoogleSignIn = async () => {
     try {
       const provider = new GoogleAuthProvider()
-      await signInWithPopup(auth, provider)
+      const userCredential = await signInWithPopup(auth, provider)
+      const idToken = await userCredential.user.getIdToken()
+
+      // Call backend to sync Google user
+      const response = await api.post('/api/auth/signup', {
+        email: userCredential.user.email,
+        name: userCredential.user.displayName || '',
+        firebaseUid: userCredential.user.uid,
+      }, {
+        headers: { Authorization: `Bearer ${idToken}` }
+      })
+
+      localStorage.setItem('jwt', response.data.token)
       toast({
         title: 'Login Successful',
         description: 'Welcome to ClipHub!',
         className: 'bg-green-500 text-white',
       })
+      router.push(userCredential.user.metadata.creationTime === userCredential.user.metadata.lastSignInTime ? '/onboarding' : '/dashboard')
     } catch (error: any) {
       toast({
         title: 'Google Sign-In Failed',
-        description: error.message || 'An error occurred. Please try again.',
+        description: error.response?.data?.detail || error.message || 'An error occurred. Please try again.',
         variant: 'destructive',
       })
     }

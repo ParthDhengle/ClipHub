@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
@@ -23,81 +23,135 @@ import {
   Settings,
   Plus,
 } from "lucide-react"
+import { useToast } from "@/hooks/use-toast"
+import { auth } from "@/lib/firebase"
+import { useAuthState } from "react-firebase-hooks/auth"
+import api from "@/lib/api"
+import { useRouter } from "next/navigation"
+
+interface Stat {
+  title: string
+  value: string
+  change: string
+  icon: React.ComponentType<any>
+  color: string
+  bgColor: string
+}
+
+interface Upload {
+  id: string
+  title: string
+  type: string
+  status: string
+  views: string
+  downloads: string
+  earnings: string
+  uploadDate: string
+}
+
+interface Achievement {
+  title: string
+  description: string
+  icon: string
+}
 
 export function CreatorDashboard() {
   const [activeTab, setActiveTab] = useState("overview")
+  const [stats, setStats] = useState<Stat[]>([])
+  const [recentUploads, setRecentUploads] = useState<Upload[]>([])
+  const [achievements, setAchievements] = useState<Achievement[]>([])
+  const [loading, setLoading] = useState(true)
+  const { toast } = useToast()
+  const [user, userLoading] = useAuthState(auth)
+  const router = useRouter()
 
-  const stats = [
-    {
-      title: "Total Views",
-      value: "2.4M",
-      change: "+12.5%",
-      icon: Eye,
-      color: "text-blue-600",
-      bgColor: "bg-blue-50",
-    },
-    {
-      title: "Downloads",
-      value: "156K",
-      change: "+8.2%",
-      icon: Download,
-      color: "text-green-600",
-      bgColor: "bg-green-50",
-    },
-    {
-      title: "Followers",
-      value: "25.4K",
-      change: "+15.3%",
-      icon: Users,
-      color: "text-purple-600",
-      bgColor: "bg-purple-50",
-    },
-    {
-      title: "Earnings",
-      value: "₹45,230",
-      change: "+22.1%",
-      icon: Rupee,
-      color: "text-orange-600",
-      bgColor: "bg-orange-50",
-    },
-  ]
+  useEffect(() => {
+    if (!userLoading && !user) {
+      router.push('/login')
+      return
+    }
 
-  const recentUploads = [
-    {
-      title: "Diwali Festival Celebration",
-      type: "Photo",
-      status: "Approved",
-      views: "12.5K",
-      downloads: "2.3K",
-      earnings: "₹1,250",
-      uploadDate: "2 days ago",
-    },
-    {
-      title: "Classical Dance Performance",
-      type: "Video",
-      status: "Pending",
-      views: "8.7K",
-      downloads: "1.8K",
-      earnings: "₹890",
-      uploadDate: "5 days ago",
-    },
-    {
-      title: "Traditional Music Collection",
-      type: "Audio",
-      status: "Approved",
-      views: "15.2K",
-      downloads: "3.1K",
-      earnings: "₹1,680",
-      uploadDate: "1 week ago",
-    },
-  ]
+    const fetchData = async () => {
+      if (!user) return
+      setLoading(true)
+      try {
+        const idToken = await user.getIdToken()
+        const headers = { Authorization: `Bearer ${idToken}` }
 
-  const achievements = [
-    { title: "Top Creator", description: "Reached 25K followers", icon: "🏆" },
-    { title: "Viral Content", description: "1M+ views on single upload", icon: "🔥" },
-    { title: "Cultural Ambassador", description: "Featured in 5+ festivals", icon: "🎭" },
-    { title: "Community Favorite", description: "4.9+ average rating", icon: "⭐" },
-  ]
+        // Fetch user stats
+        const userResponse = await api.get('/api/users/me', { headers })
+        const analyticsResponse = await api.get('/api/analytics', { headers })
+        const mediaResponse = await api.get('/api/media?userId=' + user.uid, { headers })
+
+        setStats([
+          {
+            title: "Total Views",
+            value: analyticsResponse.data.totalViews.toLocaleString(),
+            change: `+${analyticsResponse.data.viewsChange}%`,
+            icon: Eye,
+            color: "text-blue-600",
+            bgColor: "bg-blue-50",
+          },
+          {
+            title: "Downloads",
+            value: analyticsResponse.data.totalDownloads.toLocaleString(),
+            change: `+${analyticsResponse.data.downloadsChange}%`,
+            icon: Download,
+            color: "text-green-600",
+            bgColor: "bg-green-50",
+          },
+          {
+            title: "Followers",
+            value: userResponse.data.followers.toLocaleString(),
+            change: `+${analyticsResponse.data.followersChange}%`,
+            icon: Users,
+            color: "text-purple-600",
+            bgColor: "bg-purple-50",
+          },
+          {
+            title: "Earnings",
+            value: `₹${analyticsResponse.data.earnings.toLocaleString()}`,
+            change: `+${analyticsResponse.data.earningsChange}%`,
+            icon: Rupee,
+            color: "text-orange-600",
+            bgColor: "bg-orange-50",
+          },
+        ])
+
+        setRecentUploads(mediaResponse.data.items.map((item: any) => ({
+          id: item.id,
+          title: item.title,
+          type: item.type,
+          status: item.status,
+          views: item.views.toLocaleString(),
+          downloads: item.downloads.toLocaleString(),
+          earnings: `₹${item.earnings.toLocaleString()}`,
+          uploadDate: new Date(item.created_at).toLocaleDateString(),
+        })))
+
+        setAchievements([
+          { title: "Top Creator", description: "Reached 25K followers", icon: "🏆" },
+          { title: "Viral Content", description: "1M+ views on single upload", icon: "🔥" },
+          { title: "Cultural Ambassador", description: "Featured in 5+ festivals", icon: "🎭" },
+          { title: "Community Favorite", description: "4.9+ average rating", icon: "⭐" },
+        ])
+      } catch (error: any) {
+        toast({
+          title: "Error",
+          description: error.response?.data?.detail || "Failed to load dashboard data",
+          variant: "destructive",
+        })
+      } finally {
+        setLoading(false)
+      }
+    }
+
+    if (user) fetchData()
+  }, [user, userLoading, router, toast])
+
+  if (loading || userLoading) {
+    return <div className="min-h-screen flex items-center justify-center">Loading...</div>
+  }
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-orange-50/30 via-pink-50/30 to-purple-50/30">
@@ -107,13 +161,13 @@ export function CreatorDashboard() {
           <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between space-y-4 sm:space-y-0">
             <div className="flex items-center space-x-4">
               <Avatar className="h-12 w-12 ring-2 ring-orange-200">
-                <AvatarImage src="/placeholder.svg?height=48&width=48" />
+                <AvatarImage src={user?.photoURL || "/placeholder.svg"} />
                 <AvatarFallback className="bg-gradient-to-br from-orange-400 to-pink-400 text-white font-semibold">
-                  PS
+                  {user?.displayName?.charAt(0) || 'U'}
                 </AvatarFallback>
               </Avatar>
               <div>
-                <h1 className="text-xl sm:text-2xl font-bold">Welcome back, Priya!</h1>
+                <h1 className="text-xl sm:text-2xl font-bold">Welcome back, {user?.displayName || 'Creator'}!</h1>
                 <p className="text-muted-foreground">Let's create something amazing today</p>
               </div>
             </div>
@@ -122,7 +176,7 @@ export function CreatorDashboard() {
                 <Bell className="h-4 w-4 mr-2" />
                 <span className="hidden sm:inline">Notifications</span>
               </Button>
-              <Button size="sm" className="bg-gradient-to-r from-orange-500 to-pink-500">
+              <Button size="sm" className="bg-gradient-to-r from-orange-500 to-pink-500" onClick={() => router.push('/upload')}>
                 <Plus className="h-4 w-4 mr-2" />
                 Upload Content
               </Button>
@@ -176,9 +230,9 @@ export function CreatorDashboard() {
                 </CardHeader>
                 <CardContent>
                   <div className="space-y-4">
-                    {recentUploads.map((upload, index) => (
+                    {recentUploads.map((upload) => (
                       <div
-                        key={index}
+                        key={upload.id}
                         className="flex items-center justify-between p-4 border rounded-lg hover:bg-muted/50 transition-colors"
                       >
                         <div className="flex-1">
@@ -283,101 +337,101 @@ export function CreatorDashboard() {
                   <Upload className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
                   <h3 className="text-lg font-semibold mb-2">Upload Your Content</h3>
                   <p className="text-muted-foreground mb-6">Share your creative work with the ClipHub community</p>
-                  <Button size="lg" className="bg-gradient-to-r from-orange-500 to-pink-500">
+                  <Button size="lg" className="bg-gradient-to-r from-orange-500 to-pink-500" onClick={() => router.push('/upload')}>
                     <Plus className="h-4 w-4 mr-2" />
                     Start Upload
                   </Button>
                 </div>
-              </CardContent>
-            </Card>
-          </TabsContent>
+                </CardContent>
+              </Card>
+            </TabsContent>
 
-          {/* Analytics Tab */}
-          <TabsContent value="analytics" className="space-y-6">
-            <Card>
-              <CardHeader>
-                <CardTitle className="flex items-center">
-                  <BarChart3 className="h-5 w-5 mr-2" />
-                  Analytics Dashboard
-                </CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="text-center py-12">
-                  <BarChart3 className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
-                  <h3 className="text-lg font-semibold mb-2">Detailed Analytics</h3>
-                  <p className="text-muted-foreground">Track your content performance and audience insights</p>
-                </div>
-              </CardContent>
-            </Card>
-          </TabsContent>
-
-          {/* Earnings Tab */}
-          <TabsContent value="earnings" className="space-y-6">
-            <Card>
-              <CardHeader>
-                <CardTitle className="flex items-center">
-                  <Rupee className="h-5 w-5 mr-2" />
-                  Earnings Dashboard
-                </CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="grid grid-cols-1 sm:grid-cols-3 gap-6 mb-8">
-                  <div className="text-center p-6 bg-gradient-to-br from-green-50 to-emerald-50 rounded-lg">
-                    <h3 className="text-2xl font-bold text-green-600">₹45,230</h3>
-                    <p className="text-sm text-muted-foreground">Total Earnings</p>
+            {/* Analytics Tab */}
+            <TabsContent value="analytics" className="space-y-6">
+              <Card>
+                <CardHeader>
+                  <CardTitle className="flex items-center">
+                    <BarChart3 className="h-5 w-5 mr-2" />
+                    Analytics Dashboard
+                  </CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <div className="text-center py-12">
+                    <BarChart3 className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
+                    <h3 className="text-lg font-semibold mb-2">Detailed Analytics</h3>
+                    <p className="text-muted-foreground">Track your content performance and audience insights</p>
                   </div>
-                  <div className="text-center p-6 bg-gradient-to-br from-blue-50 to-cyan-50 rounded-lg">
-                    <h3 className="text-2xl font-bold text-blue-600">₹8,450</h3>
-                    <p className="text-sm text-muted-foreground">This Month</p>
-                  </div>
-                  <div className="text-center p-6 bg-gradient-to-br from-orange-50 to-yellow-50 rounded-lg">
-                    <h3 className="text-2xl font-bold text-orange-600">₹12,680</h3>
-                    <p className="text-sm text-muted-foreground">Pending</p>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-          </TabsContent>
+                </CardContent>
+              </Card>
+            </TabsContent>
 
-          {/* Collections Tab */}
-          <TabsContent value="collections" className="space-y-6">
-            <Card>
-              <CardHeader>
-                <CardTitle className="flex items-center">
-                  <Folder className="h-5 w-5 mr-2" />
-                  My Collections
-                </CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="text-center py-12">
-                  <Folder className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
-                  <h3 className="text-lg font-semibold mb-2">Organize Your Content</h3>
-                  <p className="text-muted-foreground">Create collections to organize your uploads</p>
-                </div>
-              </CardContent>
-            </Card>
-          </TabsContent>
+            {/* Earnings Tab */}
+            <TabsContent value="earnings" className="space-y-6">
+              <Card>
+                <CardHeader>
+                  <CardTitle className="flex items-center">
+                    <Rupee className="h-5 w-5 mr-2" />
+                    Earnings Dashboard
+                  </CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-6 mb-8">
+                    <div className="text-center p-6 bg-gradient-to-br from-green-50 to-emerald-50 rounded-lg">
+                      <h3 className="text-2xl font-bold text-green-600">₹{stats.find(s => s.title === "Earnings")?.value || "0"}</h3>
+                      <p className="text-sm text-muted-foreground">Total Earnings</p>
+                    </div>
+                    <div className="text-center p-6 bg-gradient-to-br from-blue-50 to-cyan-50 rounded-lg">
+                      <h3 className="text-2xl font-bold text-blue-600">₹8,450</h3>
+                      <p className="text-sm text-muted-foreground">This Month</p>
+                    </div>
+                    <div className="text-center p-6 bg-gradient-to-br from-orange-50 to-yellow-50 rounded-lg">
+                      <h3 className="text-2xl font-bold text-orange-600">₹12,680</h3>
+                      <p className="text-sm text-muted-foreground">Pending</p>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+            </TabsContent>
 
-          {/* Settings Tab */}
-          <TabsContent value="settings" className="space-y-6">
-            <Card>
-              <CardHeader>
-                <CardTitle className="flex items-center">
-                  <Settings className="h-5 w-5 mr-2" />
-                  Account Settings
-                </CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="text-center py-12">
-                  <Settings className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
-                  <h3 className="text-lg font-semibold mb-2">Manage Your Account</h3>
-                  <p className="text-muted-foreground">Update your profile and preferences</p>
-                </div>
-              </CardContent>
-            </Card>
-          </TabsContent>
-        </Tabs>
+            {/* Collections Tab */}
+            <TabsContent value="collections" className="space-y-6">
+              <Card>
+                <CardHeader>
+                  <CardTitle className="flex items-center">
+                    <Folder className="h-5 w-5 mr-2" />
+                    My Collections
+                  </CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <div className="text-center py-12">
+                    <Folder className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
+                    <h3 className="text-lg font-semibold mb-2">Organize Your Content</h3>
+                    <p className="text-muted-foreground">Create collections to organize your uploads</p>
+                  </div>
+                </CardContent>
+              </Card>
+            </TabsContent>
+
+            {/* Settings Tab */}
+            <TabsContent value="settings" className="space-y-6">
+              <Card>
+                <CardHeader>
+                  <CardTitle className="flex items-center">
+                    <Settings className="h-5 w-5 mr-2" />
+                    Account Settings
+                  </CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <div className="text-center py-12">
+                    <Settings className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
+                    <h3 className="text-lg font-semibold mb-2">Manage Your Account</h3>
+                    <p className="text-muted-foreground">Update your profile and preferences</p>
+                  </div>
+                </CardContent>
+              </Card>
+            </TabsContent>
+          </Tabs>
+        </div>
       </div>
-    </div>
-  )
-}
+    )
+  }
