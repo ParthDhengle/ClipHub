@@ -231,7 +231,7 @@ export function MediaDetailPage() {
                       className="h-8 w-8 p-0"
                       onClick={(e) => {
                         e.stopPropagation()
-                        handleLike(item.id)
+                        handleLike()
                       }}
                     >
                       <Heart 

@@ -49,3 +49,5 @@ test-results/
 
 # Uvicorn/Pydantic cache
 *.sqlite3
+
+firebase-service-account.json
