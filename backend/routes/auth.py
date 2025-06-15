@@ -1,12 +1,17 @@
 from fastapi import APIRouter, HTTPException, status
 from firebase_admin import auth
-from ..config.database import get_db
-from ..models.user import UserCreate, UserInDB
-from ..services.auth_service import signup, login
-from ..utils.validators import validate_email
+from config.database import get_db
+from models.user import UserCreate, UserInDB
+from services.auth_service import signup, login
+from utils.validators import validate_email
+from utils.security import create_access_token
 from pydantic import BaseModel
+from datetime import datetime
 
-router = APIRouter(prefix="/auth", tags=["auth"])
+router = APIRouter()
+
+class LoginRequest(BaseModel):
+    token: str
 
 @router.post("/signup", response_model=dict)
 async def signup_endpoint(user_data: UserCreate):
@@ -24,11 +29,7 @@ async def signup_endpoint(user_data: UserCreate):
         raise HTTPException(status_code=400, detail="Email already registered")
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Signup failed: {str(e)}")
-    
 
-
-class LoginRequest(BaseModel):
-    token: str
 @router.post("/login", response_model=dict)
 async def login_endpoint(login_data: LoginRequest):
     try:
@@ -51,7 +52,7 @@ async def login_endpoint(login_data: LoginRequest):
                 "location": None,
                 "specialty": None,
                 "is_verified": False,
-                "created_at": datetime.utcnow(),  # Use datetime for Pydantic
+                "created_at": datetime.utcnow(),
                 "updated_at": datetime.utcnow()
             }
             user_ref.set(user_data)
