@@ -4,7 +4,10 @@ from config.settings import settings
 from middleware.auth import auth_middleware
 from middleware.error import add_error_handling
 from routes import auth, user, media, collection, analytics, admin, upload
-
+import os
+import sys
+sys.path.append(os.path.abspath(os.path.dirname(__file__)))
+                                   
 app = FastAPI(title="ClipHub API")
 
 # Add CORS middleware

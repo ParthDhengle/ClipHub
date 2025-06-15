@@ -33,7 +33,7 @@ class LoginRequest(BaseModel):
 async def login_endpoint(login_data: LoginRequest):
     try:
         # Verify Firebase ID token
-        decoded_token = auth.verify_id_token(token)
+        decoded_token = auth.verify_id_token(login_data.token)
         firebase_uid = decoded_token["uid"]
         email = decoded_token.get("email")
         
@@ -51,8 +51,8 @@ async def login_endpoint(login_data: LoginRequest):
                 "location": None,
                 "specialty": None,
                 "is_verified": False,
-                "created_at": firestore.SERVER_TIMESTAMP,
-                "updated_at": firestore.SERVER_TIMESTAMP
+                "created_at": datetime.utcnow(),  # Use datetime for Pydantic
+                "updated_at": datetime.utcnow()
             }
             user_ref.set(user_data)
         else:

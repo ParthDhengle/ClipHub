@@ -3,7 +3,7 @@ from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 from firebase_admin import auth
 from typing import Optional
 from jose import JWTError, jwt
-from ..config.settings import settings
+from config.settings import settings
 
 security = HTTPBearer(auto_error=False)
 

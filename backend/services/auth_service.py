@@ -18,8 +18,8 @@ async def signup(user: UserCreate) -> UserInDB:
         user_data = {
             **user.dict(exclude={"password"}),
             "user_id": firebase_user.uid,
-            "created_at": datetime.utcnow(),  # Use datetime for Pydantic compatibility
-            "updated_at": datetime.utcnow()
+            "created_at": firestore.SERVER_TIMESTAMP,
+            "updated_at": firestore.SERVER_TIMESTAMP
         }
         user_in_db = await create_user(user_data)
         return user_in_db
@@ -50,8 +50,8 @@ async def login(token: str) -> dict:
                 "location": None,
                 "specialty": None,
                 "is_verified": False,
-                "created_at": datetime.utcnow(),  # Use datetime for Pydantic compatibility
-                "updated_at": datetime.utcnow()
+                "created_at": firestore.SERVER_TIMESTAMP,
+                "updated_at": firestore.SERVER_TIMESTAMP
             }
             user_ref.set(user_data)
         
