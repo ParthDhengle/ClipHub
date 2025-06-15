@@ -17,13 +17,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    const unsubscribe = onAuthStateChanged(auth, (user) => {
-      setUser(user);
-      setLoading(false);
-    });
-
-    return () => unsubscribe();
-  }, []);
+  const unsubscribe = onAuthStateChanged(auth, (user) => {
+    setUser(user); // null if no user is logged in
+    setLoading(false); // Loading becomes false once auth state is determined
+  });
+  return () => unsubscribe();
+}, []);
 
   return (
     <AuthContext.Provider value={{ user, loading }}>
