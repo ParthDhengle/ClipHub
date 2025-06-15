@@ -4,23 +4,33 @@ from ..config.database import get_db
 from ..models.user import UserCreate, UserInDB
 from ..services.auth_service import signup, login
 from ..utils.validators import validate_email
+from pydantic import BaseModel
 
 router = APIRouter(prefix="/auth", tags=["auth"])
 
-@router.post("/signup", response_model=UserInDB)
+@router.post("/signup", response_model=dict)
 async def signup_endpoint(user_data: UserCreate):
     if not validate_email(user_data.email):
         raise HTTPException(status_code=400, detail="Invalid email format")
     try:
         user_in_db = await signup(user_data)
-        return user_in_db
+        access_token = create_access_token(data={"sub": user_in_db.user_id})
+        return {
+            "user": user_in_db.dict(),
+            "access_token": access_token,
+            "token_type": "bearer"
+        }
     except auth.EmailAlreadyExistsError:
         raise HTTPException(status_code=400, detail="Email already registered")
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Signup failed: {str(e)}")
+    
 
+
+class LoginRequest(BaseModel):
+    token: str
 @router.post("/login", response_model=dict)
-async def login_endpoint(token: str):
+async def login_endpoint(login_data: LoginRequest):
     try:
         # Verify Firebase ID token
         decoded_token = auth.verify_id_token(token)

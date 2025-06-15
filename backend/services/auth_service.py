@@ -3,24 +3,23 @@ from fastapi import HTTPException, status
 from ..models.user import UserCreate, UserInDB
 from ..services.user_service import create_user
 from ..utils.security import create_access_token
-from datetime import timedelta
+from datetime import timedelta , datetime
 from ..config.database import get_db
 from ..config.settings import settings
+from google.cloud.firestore_v1 import FieldValue
 
 async def signup(user: UserCreate) -> UserInDB:
     try:
-        # Create user in Firebase Auth
         firebase_user = auth.create_user(
             email=user.email,
             password=user.password,
             display_name=user.name
         )
-        # Create user in Firestore
         user_data = {
             **user.dict(exclude={"password"}),
             "user_id": firebase_user.uid,
-            "created_at": firestore.SERVER_TIMESTAMP,
-            "updated_at": firestore.SERVER_TIMESTAMP
+            "created_at": datetime.utcnow(),  # Use datetime for Pydantic compatibility
+            "updated_at": datetime.utcnow()
         }
         user_in_db = await create_user(user_data)
         return user_in_db
@@ -28,6 +27,7 @@ async def signup(user: UserCreate) -> UserInDB:
         raise HTTPException(status_code=400, detail="Email already registered")
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Signup failed: {str(e)}")
+    
 
 async def login(token: str) -> dict:
     try:
@@ -50,8 +50,8 @@ async def login(token: str) -> dict:
                 "location": None,
                 "specialty": None,
                 "is_verified": False,
-                "created_at": firestore.SERVER_TIMESTAMP,
-                "updated_at": firestore.SERVER_TIMESTAMP
+                "created_at": datetime.utcnow(),  # Use datetime for Pydantic compatibility
+                "updated_at": datetime.utcnow()
             }
             user_ref.set(user_data)
         

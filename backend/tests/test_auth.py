@@ -2,6 +2,7 @@ import pytest
 from fastapi.testclient import TestClient
 from main import app
 from firebase_admin import auth
+from unittest.mock import patch
 
 client = TestClient(app)
 
@@ -24,11 +25,12 @@ async def test_signup():
 
 @pytest.mark.asyncio
 async def test_login():
-    # Create a test user in Firebase
-    user = auth.create_user(email="testlogin@example.com", password="password123")
-    # Simulate client-side login to get ID token (mock for testing)
-    # In a real test, you would need a valid Firebase ID token
-    response = client.post("/api/auth/login", json={"token": "mock-firebase-token"})
-    assert response.status_code in [200, 401]  # 401 if token verification fails
-    # Clean up
-    auth.delete_user(user.uid)
+    with patch("firebase_admin.auth.verify_id_token") as mock_verify:
+        mock_verify.return_value = {
+            "uid": "test_uid",
+            "email": "testlogin@example.com",
+            "name": "Test User"
+        }
+        response = client.post("/api/auth/login", json={"token": "mock-token"})
+        assert response.status_code == 200
+        assert "access_token" in response.json()

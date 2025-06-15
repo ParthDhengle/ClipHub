@@ -10,18 +10,20 @@ db = client["cliphub"]
 
 @router.get("/leaderboard")
 async def get_leaderboard():
-    pipeline = [
-        {"$group": {"_id": "$creator", "count": {"$sum": 1}}},
-        {"$sort": {"count": -1}},
-        {"$limit": 10},
-        {"$lookup": {
-            "from": "users",
-            "localField": "_id",
-            "foreignField": "_id",
-            "as": "creator"
-        }},
-        {"$unwind": "$creator"},
-        {"$project": {"_id": 0, "creator_id": "$_id", "count": 1, "creator_name": "$creator.name"}}
-    ]
-    stats = list(db.media.aggregate(pipeline))
-    return stats
+    db = get_db()
+    query = db.collection("media").stream()
+    creator_counts = {}
+    for doc in query:
+        creator_id = doc.to_dict().get("user_id")
+        creator_counts[creator_id] = creator_counts.get(creator_id, 0) + 1
+    top_creators = sorted(creator_counts.items(), key=lambda x: x[1], reverse=True)[:10]
+    result = []
+    for creator_id, count in top_creators:
+        user_doc = db.collection("users").document(creator_id).get()
+        if user_doc.exists:
+            result.append({
+                "creator_id": creator_id,
+                "count": count,
+                "creator_name": user_doc.to_dict().get("name")
+            })
+    return result
