@@ -11,6 +11,8 @@ import { useToast } from '@/hooks/use-toast'
 import { saveUserInterests } from '@/lib/utils'
 import { useAuthState } from 'react-firebase-hooks/auth'
 import { auth } from '@/lib/firebase'
+import api from '@/lib/api'
+import { useRouter } from 'next/navigation'
 
 const preferencesSchema = z.object({
   preferences: z.array(z.string()).optional(),
@@ -26,6 +28,7 @@ interface PreferencesProps {
 export function Preferences({ onNext, onBack }: PreferencesProps) {
   const { toast } = useToast()
   const [user] = useAuthState(auth)
+  const router = useRouter()
   const form = useForm<PreferencesFormValues>({
     resolver: zodResolver(preferencesSchema),
     defaultValues: {
@@ -50,16 +53,10 @@ export function Preferences({ onNext, onBack }: PreferencesProps) {
       return
     }
     try {
-      const token = await user.getIdToken()
-      const response = await fetch('/api/user/preferences', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token}`,
-        },
-        body: JSON.stringify({ preferences: data.preferences || [], user_id: user.uid }),
+      await api.post('/api/user/preferences', {
+        preferences: data.preferences || [],
+        user_id: user.uid,
       })
-      if (!response.ok) throw new Error('Failed to save preferences')
       saveUserInterests(data.preferences || [])
       toast({
         title: 'Preferences Saved',
@@ -74,6 +71,10 @@ export function Preferences({ onNext, onBack }: PreferencesProps) {
         variant: 'destructive',
       })
     }
+  }
+
+  const handleSkip = () => {
+    router.push('/')
   }
 
   return (
@@ -113,9 +114,12 @@ export function Preferences({ onNext, onBack }: PreferencesProps) {
                 </FormItem>
               )}
             />
-            <div className="flex justify-between">
+            <div className="flex justify-between items-center">
               <Button type="button" variant="outline" onClick={onBack}>
                 Back
+              </Button>
+              <Button type="button" variant="ghost" onClick={handleSkip}>
+                Skip to Home
               </Button>
               <Button type="submit" className="bg-blue-600 text-white hover:bg-blue-700">
                 Finish

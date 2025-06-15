@@ -2,7 +2,7 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from config.settings import settings
 from middleware.error import add_error_handling
-from routes import auth, user, media, collection, analytics, admin, upload
+from routes import auth, user, media, collection, analytics, admin, upload,preferences
 import os
 import sys
 sys.path.append(os.path.abspath(os.path.dirname(__file__)))
@@ -29,7 +29,8 @@ app.include_router(collection.router, prefix="/api/collections", tags=["collecti
 app.include_router(analytics.router, prefix="/api/analytics", tags=["analytics"])
 app.include_router(admin.router, prefix="/api/admin", tags=["admin"])
 app.include_router(upload.router, prefix="/api/upload", tags=["upload"])
-
+app.include_router(preferences.router, prefix="/api/user")
+                   
 @app.get("/health")
 async def health_check():
     return {"status": "healthy"}
