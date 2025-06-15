@@ -13,8 +13,14 @@ export const metadata: Metadata = {
   description: 'The best free stock photos, royalty free images & videos shared by creators.',
   keywords: ['stock photos', 'free images', 'royalty free', 'stock videos', 'creators', 'free music'],
   authors: [{ name: 'ClipHub Team' }],
-  viewport: 'width=device-width, initial-scale=1',
   generator: 'v0.dev',
+}
+
+export function generateViewport() {
+  return {
+    width: 'device-width',
+    initialScale: 1,
+  }
 }
 
 export default function Home() {
