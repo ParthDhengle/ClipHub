@@ -1,6 +1,7 @@
 from config.database import get_db
 from models.analytics import AnalyticsInDB, AnalyticsCreate
 from typing import Optional
+from google.cloud import firestore
 
 async def record_analytics(user_id: str, media_id: Optional[str], analytics_data: AnalyticsCreate) -> AnalyticsInDB:
     db = get_db()

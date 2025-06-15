@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Depends
+from fastapi import APIRouter, Depends, HTTPException
 from models.user import UserUpdate, UserInDB
 from services.user_service import get_user, update_user
 from middleware.auth import get_current_user

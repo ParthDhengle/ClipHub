@@ -1,6 +1,7 @@
 from pydantic import BaseModel, validator
 from datetime import datetime
 from typing import Optional, Any
+from google.cloud import firestore
 
 class TimestampModel(BaseModel):
     created_at: datetime

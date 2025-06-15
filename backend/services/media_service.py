@@ -1,6 +1,7 @@
 from config.database import get_db
 from models.media import MediaInDB, MediaCreate
 from typing import Optional, List
+from google.cloud import firestore
 
 async def create_media(user_id: str, media_data: MediaCreate) -> MediaInDB:
     db = get_db()

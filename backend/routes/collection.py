@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Depends
+from fastapi import APIRouter, Depends, HTTPException
 from models.collection import CollectionCreate, CollectionInDB
 from services.collection_service import create_collection, get_collection
 from middleware.auth import get_current_user

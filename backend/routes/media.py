@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Depends
+from fastapi import APIRouter, Depends, HTTPException
 from models.media import MediaCreate, MediaInDB
 from services.media_service import create_media, get_media, list_media
 from middleware.auth import get_current_user

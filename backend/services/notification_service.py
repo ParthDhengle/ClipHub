@@ -1,5 +1,6 @@
 from config.database import get_db
 from typing import Dict
+from google.cloud import firestore
 
 async def create_notification(user_id: str, notification_data: Dict):
     db = get_db()

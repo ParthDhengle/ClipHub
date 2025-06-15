@@ -1,12 +1,12 @@
 from firebase_admin import auth
 from fastapi import HTTPException, status
-from ..models.user import UserCreate, UserInDB
-from ..services.user_service import create_user
-from ..utils.security import create_access_token
-from datetime import timedelta , datetime
-from ..config.database import get_db
-from ..config.settings import settings
-from google.cloud.firestore_v1 import FieldValue
+from models.user import UserCreate, UserInDB
+from services.user_service import create_user
+from utils.security import create_access_token
+from datetime import timedelta, datetime
+from config.database import get_db
+from config.settings import settings
+from google.cloud import firestore
 
 async def signup(user: UserCreate) -> UserInDB:
     try:
@@ -27,7 +27,6 @@ async def signup(user: UserCreate) -> UserInDB:
         raise HTTPException(status_code=400, detail="Email already registered")
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Signup failed: {str(e)}")
-    
 
 async def login(token: str) -> dict:
     try:

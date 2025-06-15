@@ -1,6 +1,7 @@
 from config.database import get_db
 from models.collection import CollectionInDB, CollectionCreate
 from typing import Optional, List
+from google.cloud import firestore
 
 async def create_collection(user_id: str, collection_data: CollectionCreate) -> CollectionInDB:
     db = get_db()

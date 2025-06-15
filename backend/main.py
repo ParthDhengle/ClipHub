@@ -1,7 +1,6 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from config.settings import settings
-from middleware.auth import auth_middleware
 from middleware.error import add_error_handling
 from routes import auth, user, media, collection, analytics, admin, upload
 import os
@@ -13,7 +12,7 @@ app = FastAPI(title="ClipHub API")
 # Add CORS middleware
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=settings.ALLOWED_ORIGINS,
+    allow_origins=settings.allowed_origins_list,
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
