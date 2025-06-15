@@ -96,7 +96,7 @@ if (!baseURL) {
 
 // Create Axios instance
 const api: AxiosInstance = axios.create({
-  baseURL,
+  baseURL: process.env.NEXT_PUBLIC_API_URL,
   timeout: 10000,
   headers: {
     'Content-Type': 'application/json',
@@ -106,6 +106,9 @@ const api: AxiosInstance = axios.create({
 // Store for custom JWT token
 let customToken: string | null = null;
 
+const isUserAuthenticated = (): boolean => {
+  return !!auth.currentUser;
+};
 // Request interceptor for adding authentication tokens
 api.interceptors.request.use(
   async (config: InternalAxiosRequestConfig): Promise<InternalAxiosRequestConfig> => {
@@ -173,7 +176,7 @@ export const login = async () => {
   }
   
   const firebaseToken = await user.getIdToken();
-  const response = await api.post<{ access_token: string; token_type: string }>('/api/auth/login', {
+  const response = await api.post('/api/auth/login', {
     token: firebaseToken
   });
   
@@ -186,66 +189,92 @@ export const login = async () => {
 
 // Helper function to ensure user is logged in with custom token
 export const ensureAuthenticated = async () => {
+  if (!isUserAuthenticated()) {
+    throw new Error('User not authenticated. Please log in first.');
+  }
+  
   if (!customToken) {
     await login();
   }
 };
 
 // User endpoints
-export const getUser = async () => {
-  await ensureAuthenticated();
-  return api.get<User>('/api/users/me');
-};
 
-export const updateUser = async (data: Partial<User>) => {
-  await ensureAuthenticated();
-  return api.put<User>('/api/users/me', data);
-};
 
-// Media endpoints
-export const uploadMedia = async (file: File) => {
-  await ensureAuthenticated();
-  const formData = new FormData();
-  formData.append('file', file);
-  return api.post<{ url: string }>('/api/upload/media', formData, {
-    headers: { 'Content-Type': 'multipart/form-data' },
-  });
-};
 
-export const createMedia = async (data: MediaCreate) => {
-  await ensureAuthenticated();
-  return api.post<Media>('/api/media/', data);
-};
 
 export const getMedia = async (id: string) => {
   return api.get<Media>(`/api/media/${id}`);
 };
 
 export const listMedia = async () => {
+  // Check if user is authenticated before making the request
+  if (!isUserAuthenticated()) {
+    throw new Error('Please log in to view media');
+  }
+  
   await ensureAuthenticated();
-  return api.get<Media[]>('/api/media/');
+  return api.get('/api/media/');
 };
 
-// Collection endpoints
-export const createCollection = async (data: CollectionData) => {
-  await ensureAuthenticated();
-  return api.post<Collection>('/api/collections/', data);
+export const getMediaPublic = async (id: string) => {
+  return api.get(`/api/media/${id}`);
 };
+
+export const getCollectionPublic = async (id: string) => {
+  return api.get(`/api/collections/${id}`);
+};
+
+// Keep all other functions the same...
+export const getUser = async () => {
+  await ensureAuthenticated();
+  return api.get('/api/users/me');
+};
+
+export const updateUser = async (data: any) => {
+  await ensureAuthenticated();
+  return api.put('/api/users/me', data);
+};
+
+export const uploadMedia = async (file: File) => {
+  await ensureAuthenticated();
+  const formData = new FormData();
+  formData.append('file', file);
+  return api.post('/api/upload/media', formData, {
+    headers: { 'Content-Type': 'multipart/form-data' },
+  });
+};
+
+export const createMedia = async (data: any) => {
+  await ensureAuthenticated();
+  return api.post('/api/media/', data);
+};
+
+export const createCollection = async (data: any) => {
+  await ensureAuthenticated();
+  return api.post('/api/collections/', data);
+};
+
+export const recordAnalytics = async (data: any) => {
+  await ensureAuthenticated();
+  return api.post('/api/analytics/', data);
+};
+
+export const logout = () => {
+  customToken = null;
+  return auth.signOut();
+};
+
+
+// Collection endpoints
 
 export const getCollection = async (id: string) => {
   return api.get<Collection>(`/api/collections/${id}`);
 };
 
 // Analytics endpoint
-export const recordAnalytics = async (data: Partial<Analytics>) => {
-  await ensureAuthenticated();
-  return api.post<Analytics>('/api/analytics/', data);
-};
 
-// Clear tokens on logout
-export const logout = () => {
-  customToken = null;
-  return auth.signOut();
-};
+
+
 
 export default api;

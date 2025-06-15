@@ -7,7 +7,6 @@ import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
-// import { Icons } from '@/components/ui/icons'
 import { toast } from '@/hooks/use-toast'
 import { signInWithEmailAndPassword, createUserWithEmailAndPassword, signInWithPopup, GoogleAuthProvider } from 'firebase/auth'
 import { auth } from '@/lib/firebase'
@@ -29,11 +28,15 @@ export function UserLogin({ onSuccess }: UserLoginProps) {
     setIsLoading(true)
 
     try {
+      console.log('Attempting login with email:', email)
+      
       // Sign in with Firebase
-      await signInWithEmailAndPassword(auth, email, password)
+      const userCredential = await signInWithEmailAndPassword(auth, email, password)
+      console.log('Firebase login successful:', userCredential.user)
       
       // Get custom JWT from backend
       await login()
+      console.log('Backend login successful')
       
       toast({
         title: 'Success',
@@ -62,8 +65,11 @@ export function UserLogin({ onSuccess }: UserLoginProps) {
     setIsLoading(true)
 
     try {
+      console.log('Attempting signup with email:', email)
+      
       // Create user with Firebase
       const userCredential = await createUserWithEmailAndPassword(auth, email, password)
+      console.log('Firebase signup successful:', userCredential.user)
       
       // Send user data to backend
       await signup({
@@ -71,6 +77,7 @@ export function UserLogin({ onSuccess }: UserLoginProps) {
         name,
         password
       })
+      console.log('Backend signup successful')
       
       toast({
         title: 'Success',
@@ -79,6 +86,7 @@ export function UserLogin({ onSuccess }: UserLoginProps) {
       
       // Check if it's a new user for onboarding
       const isNewUser = userCredential.user.metadata.creationTime === userCredential.user.metadata.lastSignInTime
+      console.log('Is new user:', isNewUser)
       
       if (onSuccess) {
         onSuccess()
@@ -103,13 +111,18 @@ export function UserLogin({ onSuccess }: UserLoginProps) {
     setIsLoading(true)
     
     try {
+      console.log('Attempting Google sign-in, isSignUp:', isSignUp)
+      
       const provider = new GoogleAuthProvider()
       const result = await signInWithPopup(auth, provider)
+      console.log('Google sign-in successful:', result.user)
       
       // Get custom JWT from backend
       await login()
+      console.log('Backend login after Google successful')
       
       const isNewUser = result.user.metadata.creationTime === result.user.metadata.lastSignInTime
+      console.log('Is new user (Google):', isNewUser)
       
       toast({
         title: 'Success',
@@ -134,6 +147,8 @@ export function UserLogin({ onSuccess }: UserLoginProps) {
       setIsLoading(false)
     }
   }
+
+  console.log('UserLogin component rendering, isLoading:', isLoading)
 
   return (
     <div className="container mx-auto px-4 py-8 max-w-md">
@@ -300,7 +315,7 @@ export function UserLogin({ onSuccess }: UserLoginProps) {
   )
 }
 
-// Add Icons component if it doesn't exist
+// Icons component
 const Icons = {
   spinner: (props: React.SVGProps<SVGSVGElement>) => (
     <svg

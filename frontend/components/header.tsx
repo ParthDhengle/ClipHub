@@ -3,7 +3,7 @@
 import { useState, useEffect } from "react"
 import Link from "next/link"
 import { Button } from "@/components/ui/button"
-import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet"
+import { Sheet, SheetContent, SheetTrigger, SheetHeader, SheetTitle } from "@/components/ui/sheet"
 import {
   Menu,
   Upload,
@@ -36,15 +36,26 @@ export function Header() {
   const [user, setUser] = useState<User | null>(null)
 
   useEffect(() => {
-    const savedUser = localStorage.getItem('cliphub_user')
-    if (savedUser) {
-      setUser(JSON.parse(savedUser))
+    // Add error handling for localStorage
+    try {
+      const savedUser = localStorage.getItem('cliphub_user')
+      if (savedUser) {
+        setUser(JSON.parse(savedUser))
+      }
+    } catch (error) {
+      console.error('Error loading user from localStorage:', error)
+      // Clear corrupted data
+      localStorage.removeItem('cliphub_user')
     }
   }, [])
 
   const handleLogout = () => {
-    localStorage.removeItem('cliphub_user')
-    setUser(null)
+    try {
+      localStorage.removeItem('cliphub_user')
+      setUser(null)
+    } catch (error) {
+      console.error('Error during logout:', error)
+    }
   }
 
   return (
@@ -179,6 +190,9 @@ export function Header() {
               </Button>
             </SheetTrigger>
             <SheetContent side="right" className="w-[300px] sm:w-[400px]">
+              <SheetHeader>
+                <SheetTitle>Navigation Menu</SheetTitle>
+              </SheetHeader>
               <div className="flex flex-col space-y-4 mt-8">
                 {user && (
                   <div className="flex items-center space-x-3 pb-4 border-b">
