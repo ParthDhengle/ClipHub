@@ -1,62 +1,162 @@
-"use client"
+"use client";
 
-import type React from "react"
+import type React from "react";
+import { useState } from "react";
+import { useRouter } from "next/navigation";
+import { useAuth } from "../lib/auth-context";
+import { useForm } from "react-hook-form";
+import { zodResolver } from "@hookform/resolvers/zod";
+import * as z from "zod";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
+import { Label } from "@/components/ui/label";
+import { Checkbox } from "@/components/ui/checkbox";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Upload, ImageIcon, Video, Music, Info, X } from "lucide-react";
+import { useToast } from "@/hooks/use-toast";
+import api from "@/lib/api";
 
-import { useState } from "react"
-import { useRouter } from "next/navigation"; // Import useRouter for redirection
-import { useAuth } from "@/lib/auth-context";
-import { Button } from "@/components/ui/button"
-import { Input } from "@/components/ui/input"
-import { Textarea } from "@/components/ui/textarea"
-import { Label } from "@/components/ui/label"
-import { Checkbox } from "@/components/ui/checkbox"
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
-import { Upload, ImageIcon, Video, Music, Info, X } from "lucide-react"
+// Define the form schema
+const formSchema = z.object({
+  title: z.string().min(3, "Title must be at least 3 characters").max(100, "Title is too long"),
+  category: z.string().nonempty("Please select a category"),
+  description: z.string().max(500, "Description cannot exceed 500 characters").optional(),
+  tags: z
+    .string()
+    .optional()
+    .transform((val) => (val ? val.split(",").map((tag) => tag.trim()).filter((tag) => tag) : [])),
+  license: z.literal(true, { message: "You must agree to the license terms" }),
+});
+
+type FormValues = z.infer<typeof formSchema>;
 
 export function UploadForm() {
   const { user, loading } = useAuth();
   const router = useRouter();
-  const [files, setFiles] = useState<File[]>([])
-  const [dragActive, setDragActive] = useState(false)
- 
+  const { toast } = useToast();
+  const [files, setFiles] = useState<File[]>([]);
+  const [dragActive, setDragActive] = useState(false);
+  const [uploading, setUploading] = useState(false);
+
+  // Form setup with react-hook-form
+  const form = useForm<FormValues>({
+    resolver: zodResolver(formSchema),
+    defaultValues: {
+      title: "",
+      category: "",
+      description: "",
+      tags: "",
+      license: false,
+    },
+  });
 
   // Redirect to login if not authenticated
+  if (loading) {
+    return <div>Loading...</div>;
+  }
   if (!user) {
-    router.push('/login');
+    router.push("/login");
     return null;
   }
+
   const handleDrag = (e: React.DragEvent) => {
-    e.preventDefault()
-    e.stopPropagation()
+    e.preventDefault();
+    e.stopPropagation();
     if (e.type === "dragenter" || e.type === "dragover") {
-      setDragActive(true)
+      setDragActive(true);
     } else if (e.type === "dragleave") {
-      setDragActive(false)
+      setDragActive(false);
     }
-  }
+  };
 
   const handleDrop = (e: React.DragEvent) => {
-    e.preventDefault()
-    e.stopPropagation()
-    setDragActive(false)
+    e.preventDefault();
+    e.stopPropagation();
+    setDragActive(false);
 
     if (e.dataTransfer.files && e.dataTransfer.files.length > 0) {
-      const newFiles = Array.from(e.dataTransfer.files)
-      setFiles((prev) => [...prev, ...newFiles])
+      const newFiles = Array.from(e.dataTransfer.files);
+      setFiles((prev) => [...prev, ...newFiles]);
     }
-  }
+  };
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files && e.target.files.length > 0) {
-      const newFiles = Array.from(e.target.files)
-      setFiles((prev) => [...prev, ...newFiles])
+      const newFiles = Array.from(e.target.files);
+      setFiles((prev) => [...prev, ...newFiles]);
     }
-  }
+  };
 
   const removeFile = (index: number) => {
-    setFiles((prev) => prev.filter((_, i) => i !== index))
-  }
+    setFiles((prev) => prev.filter((_, i) => i !== index));
+  };
+
+  const onSubmit = async (data: FormValues) => {
+    if (files.length === 0) {
+      toast({
+        title: "Error",
+        description: "Please select at least one file to upload.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    setUploading(true);
+    try {
+      // Upload each file
+      for (const file of files) {
+        const formData = new FormData();
+        formData.append("file", file);
+
+        // Step 1: Upload the file
+        const uploadResponse = await api.post("/api/upload/media", formData, {
+          headers: { "Content-Type": "multipart/form-data" },
+        });
+
+        const fileUrl = uploadResponse.data.url; // Assuming backend returns the uploaded file's URL
+        const thumbnailUrl = uploadResponse.data.thumbnail_url || ""; // Optional thumbnail URL
+
+        // Step 2: Create media entry with metadata
+        const mediaData = {
+          title: data.title,
+          url: fileUrl,
+          thumbnail_url: thumbnailUrl,
+          type: file.type.startsWith("image/")
+            ? "photo"
+            : file.type.startsWith("video/")
+            ? "video"
+            : "music",
+          category_id: data.category,
+          is_premium: false,
+          tags: data.tags || [],
+          description: data.description || "",
+        };
+
+        await api.post("/api/media/", mediaData);
+      }
+
+      toast({
+        title: "Success!",
+        description: "Your content has been uploaded successfully.",
+        className: "bg-green-500 text-white",
+      });
+
+      // Reset form and files
+      form.reset();
+      setFiles([]);
+      router.push("/dashboard"); // Redirect to dashboard after upload
+    } catch (error: any) {
+      toast({
+        title: "Upload Failed",
+        description: error.response?.data?.message || "Failed to upload content. Please try again.",
+        variant: "destructive",
+      });
+    } finally {
+      setUploading(false);
+    }
+  };
 
   return (
     <section className="py-12">
@@ -75,123 +175,181 @@ export function UploadForm() {
               </CardDescription>
             </CardHeader>
             <CardContent>
-              {/* File Upload Area */}
-              <div
-                className={`border-2 border-dashed rounded-lg p-8 text-center mb-6 ${
-                  dragActive ? "border-primary bg-primary/5" : "border-muted-foreground/20"
-                }`}
-                onDragEnter={handleDrag}
-                onDragOver={handleDrag}
-                onDragLeave={handleDrag}
-                onDrop={handleDrop}
-              >
-                <input
-                  id="file-upload"
-                  type="file"
-                  multiple
-                  accept="image/*,video/*,audio/*"
-                  className="hidden"
-                  onChange={handleFileChange}
-                />
-                <label htmlFor="file-upload" className="cursor-pointer">
-                  <div className="flex flex-col items-center">
-                    <Upload className="h-12 w-12 text-muted-foreground mb-4" />
-                    <p className="text-lg font-medium mb-1">Drag and drop files here</p>
-                    <p className="text-muted-foreground mb-4">or click to browse your device</p>
-                    <Button type="button">Select Files</Button>
-                  </div>
-                </label>
-              </div>
-
-              {/* Selected Files */}
-              {files.length > 0 && (
-                <div className="mb-6">
-                  <h3 className="font-medium mb-3">Selected Files ({files.length})</h3>
-                  <div className="space-y-2">
-                    {files.map((file, index) => (
-                      <div key={index} className="flex items-center justify-between p-3 bg-muted/50 rounded-lg">
-                        <div className="flex items-center">
-                          {file.type.startsWith("image/") && <ImageIcon className="h-5 w-5 mr-2" />}
-                          {file.type.startsWith("video/") && <Video className="h-5 w-5 mr-2" />}
-                          {file.type.startsWith("audio/") && <Music className="h-5 w-5 mr-2" />}
-                          <span className="truncate max-w-xs">{file.name}</span>
-                          <span className="text-xs text-muted-foreground ml-2">
-                            ({(file.size / (1024 * 1024)).toFixed(2)} MB)
-                          </span>
-                        </div>
-                        <Button variant="ghost" size="sm" onClick={() => removeFile(index)}>
-                          <X className="h-4 w-4" />
-                        </Button>
+              <Form {...form}>
+                <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
+                  {/* File Upload Area */}
+                  <div
+                    className={`border-2 border-dashed rounded-lg p-8 text-center mb-6 ${
+                      dragActive ? "border-primary bg-primary/5" : "border-muted-foreground/20"
+                    }`}
+                    onDragEnter={handleDrag}
+                    onDragOver={handleDrag}
+                    onDragLeave={handleDrag}
+                    onDrop={handleDrop}
+                  >
+                    <input
+                      id="file-upload"
+                      type="file"
+                      multiple
+                      accept="image/*,video/*,audio/*"
+                      className="hidden"
+                      onChange={handleFileChange}
+                    />
+                    <label htmlFor="file-upload" className="cursor-pointer">
+                      <div className="flex flex-col items-center">
+                        <Upload className="h-12 w-12 text-muted-foreground mb-4" />
+                        <p className="text-lg font-medium mb-1">Drag and drop files here</p>
+                        <p className="text-muted-foreground mb-4">or click to browse your device</p>
+                        <Button type="button">Select Files</Button>
                       </div>
-                    ))}
+                    </label>
                   </div>
-                </div>
-              )}
 
-              {/* File Details Form */}
-              <div className="space-y-6">
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <div className="space-y-2">
-                    <Label htmlFor="title">Title</Label>
-                    <Input id="title" placeholder="Enter a title for your content" />
+                  {/* Selected Files */}
+                  {files.length > 0 && (
+                    <div className="mb-6">
+                      <h3 className="font-medium mb-3">Selected Files ({files.length})</h3>
+                      <div className="space-y-2">
+                        {files.map((file, index) => (
+                          <div key={index} className="flex items-center justify-between p-3 bg-muted/50 rounded-lg">
+                            <div className="flex items-center">
+                              {file.type.startsWith("image/") && <ImageIcon className="h-5 w-5 mr-2" />}
+                              {file.type.startsWith("video/") && <Video className="h-5 w-5 mr-2" />}
+                              {file.type.startsWith("audio/") && <Music className="h-5 w-5 mr-2" />}
+                              <span className="truncate max-w-xs">{file.name}</span>
+                              <span className="text-xs text-muted-foreground ml-2">
+                                ({(file.size / (1024 * 1024)).toFixed(2)} MB)
+                              </span>
+                            </div>
+                            <Button variant="ghost" size="sm" onClick={() => removeFile(index)}>
+                              <X className="h-4 w-4" />
+                            </Button>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+
+                  {/* File Details Form */}
+                  <div className="space-y-6">
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      <FormField
+                        control={form.control}
+                        name="title"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel>Title</FormLabel>
+                            <FormControl>
+                              <Input placeholder="Enter a title for your content" {...field} />
+                            </FormControl>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+                      <FormField
+                        control={form.control}
+                        name="category"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel>Category</FormLabel>
+                            <Select onValueChange={field.onChange} defaultValue={field.value}>
+                              <FormControl>
+                                <SelectTrigger>
+                                  <SelectValue placeholder="Select category" />
+                                </SelectTrigger>
+                              </FormControl>
+                              <SelectContent>
+                                <SelectItem value="nature">Nature</SelectItem>
+                                <SelectItem value="people">People</SelectItem>
+                                <SelectItem value="architecture">Architecture</SelectItem>
+                                <SelectItem value="animals">Animals</SelectItem>
+                                <SelectItem value="travel">Travel</SelectItem>
+                                <SelectItem value="food">Food</SelectItem>
+                                <SelectItem value="business">Business</SelectItem>
+                                <SelectItem value="technology">Technology</SelectItem>
+                              </SelectContent>
+                            </Select>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+                    </div>
+
+                    <FormField
+                      control={form.control}
+                      name="description"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Description</FormLabel>
+                          <FormControl>
+                            <Textarea placeholder="Describe your content" rows={4} {...field} />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+
+                    <FormField
+                      control={form.control}
+                      name="tags"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Tags (comma separated)</FormLabel>
+                          <FormControl>
+                            <Input placeholder="nature, landscape, mountains, sky" {...field} />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+
+                    <FormField
+                      control={form.control}
+                      name="license"
+                      render={({ field }) => (
+                        <FormItem className="flex items-start space-x-2">
+                          <FormControl>
+                            <Checkbox
+                              checked={field.value}
+                              onCheckedChange={field.onChange}
+                            />
+                          </FormControl>
+                          <div className="grid gap-1.5 leading-none">
+                            <FormLabel className="text-sm font-medium leading-none">
+                              I confirm that I have all necessary rights to the content I'm uploading
+                            </FormLabel>
+                            <p className="text-sm text-muted-foreground">
+                              By uploading, you agree to our{" "}
+                              <a href="/terms" className="underline">
+                                Terms of Service
+                              </a>{" "}
+                              and{" "}
+                              <a href="/license" className="underline">
+                                License Agreement
+                              </a>
+                            </p>
+                          </div>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+
+                    <div className="flex justify-end space-x-4">
+                      <Button
+                        type="button"
+                        variant="outline"
+                        onClick={() => router.push("/dashboard")}
+                        disabled={uploading}
+                      >
+                        Cancel
+                      </Button>
+                      <Button type="submit" disabled={uploading}>
+                        {uploading ? "Uploading..." : "Upload Content"}
+                      </Button>
+                    </div>
                   </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="category">Category</Label>
-                    <Select>
-                      <SelectTrigger>
-                        <SelectValue placeholder="Select category" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="nature">Nature</SelectItem>
-                        <SelectItem value="people">People</SelectItem>
-                        <SelectItem value="architecture">Architecture</SelectItem>
-                        <SelectItem value="animals">Animals</SelectItem>
-                        <SelectItem value="travel">Travel</SelectItem>
-                        <SelectItem value="food">Food</SelectItem>
-                        <SelectItem value="business">Business</SelectItem>
-                        <SelectItem value="technology">Technology</SelectItem>
-                      </SelectContent>
-                    </Select>
-                  </div>
-                </div>
-
-                <div className="space-y-2">
-                  <Label htmlFor="description">Description</Label>
-                  <Textarea id="description" placeholder="Describe your content" rows={4} />
-                </div>
-
-                <div className="space-y-2">
-                  <Label htmlFor="tags">Tags (comma separated)</Label>
-                  <Input id="tags" placeholder="nature, landscape, mountains, sky" />
-                </div>
-
-                <div className="flex items-start space-x-2">
-                  <Checkbox id="license" />
-                  <div className="grid gap-1.5 leading-none">
-                    <Label
-                      htmlFor="license"
-                      className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
-                    >
-                      I confirm that I have all necessary rights to the content I'm uploading
-                    </Label>
-                    <p className="text-sm text-muted-foreground">
-                      By uploading, you agree to our{" "}
-                      <a href="/terms" className="underline">
-                        Terms of Service
-                      </a>{" "}
-                      and{" "}
-                      <a href="/license" className="underline">
-                        License Agreement
-                      </a>
-                    </p>
-                  </div>
-                </div>
-
-                <div className="flex justify-end space-x-4">
-                  <Button variant="outline">Cancel</Button>
-                  <Button>Upload Content</Button>
-                </div>
-              </div>
+                </form>
+              </Form>
             </CardContent>
           </Card>
 
@@ -208,5 +366,5 @@ export function UploadForm() {
         </div>
       </div>
     </section>
-  )
+  );
 }
