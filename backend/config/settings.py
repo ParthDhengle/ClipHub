@@ -35,6 +35,7 @@ class Settings(BaseSettings):
     CLOUDINARY_CLOUD_NAME: str
     CLOUDINARY_API_KEY: str
     CLOUDINARY_API_SECRET: str
+    CLOUDINARY_URL: str
         
     @property
     def allowed_origins_list(self) -> List[str]:

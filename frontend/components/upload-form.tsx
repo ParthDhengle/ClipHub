@@ -1,11 +1,11 @@
 "use client"
 
-import React, { useState } from "react"
+import type React from "react"
+import { useState } from "react"
 import { useRouter, useSearchParams } from "next/navigation"
 import { useAuth } from "@/lib/auth-context"
 import { useForm, SubmitHandler } from "react-hook-form"
 import { zodResolver } from "@hookform/resolvers/zod"
-import axios, { AxiosError } from "axios"
 import * as z from "zod"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -19,142 +19,197 @@ import { useToast } from "@/hooks/use-toast"
 import api from "@/lib/api"
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form"
 
-// --- schema & types ---
+// Define the form schema
 const formSchema = z.object({
-  title: z.string().min(3).max(100),
-  category: z.string().nonempty(),
-  description: z.string().max(500).optional(),
+  title: z.string().min(3, "Title must be at least 3 characters").max(100, "Title is too long"),
+  category: z.string().nonempty("Please select a category"),
+  description: z.string().max(500, "Description cannot exceed 500 characters").optional(),
   tags: z
     .string()
     .optional()
-    .transform((val) =>
-      val
-        ? val
-            .split(",")
-            .map((t) => t.trim())
-            .filter(Boolean)
-        : []
-    ),
-  license: z.boolean().refine((v) => v, { message: "You must agree to the license terms" }),
+    .transform((val) => (val ? val.split(",").map((tag) => tag.trim()).filter((tag) => tag) : [])),
+  license: z.boolean().refine((val) => val === true, { message: "You must agree to the license terms" }),
 })
 
+// Define form values type
 type FormValues = z.infer<typeof formSchema>
 
 export function UploadForm() {
   const { user, loading } = useAuth()
   const router = useRouter()
   const searchParams = useSearchParams()
-  const from = searchParams.get("from") || "/dashboard"
   const { toast } = useToast()
-
   const [files, setFiles] = useState<File[]>([])
   const [dragActive, setDragActive] = useState(false)
   const [uploading, setUploading] = useState(false)
-  const [progress, setProgress] = useState(0)
-  const [currentIndex, setCurrentIndex] = useState(-1)
+  const [uploadProgress, setUploadProgress] = useState<number>(0);
+  const [uploadingFileIndex, setUploadingFileIndex] = useState(-1)
 
+  const from = searchParams.get("from") || "/dashboard"
+
+  // Form setup with explicit typing
   const form = useForm<FormValues>({
     resolver: zodResolver(formSchema),
     defaultValues: {
       title: "",
       category: "",
       description: "",
-      tags: "",
+      tags: [] as string[], // Fix: Explicitly type as string[]
       license: false,
     },
   })
 
-  if (loading) return <div>Loading…</div>
+  // Handle loading and authentication
+  if (loading) return <div>Loading...</div>
   if (!user) {
     router.push("/login")
     return null
   }
 
-  // drag & drop…
+  // Drag and drop handlers
   const handleDrag = (e: React.DragEvent) => {
     e.preventDefault()
     e.stopPropagation()
-    setDragActive(e.type === "dragenter" || e.type === "dragover")
+    if (e.type === "dragenter" || e.type === "dragover") setDragActive(true)
+    else if (e.type === "dragleave") setDragActive(false)
   }
+
   const handleDrop = (e: React.DragEvent) => {
     e.preventDefault()
     e.stopPropagation()
     setDragActive(false)
-    if (e.dataTransfer.files.length) {
-      setFiles((f) => [...f, ...Array.from(e.dataTransfer.files)])
+    if (e.dataTransfer.files && e.dataTransfer.files.length > 0) {
+      setFiles((prev) => [...prev, ...Array.from(e.dataTransfer.files)])
     }
   }
-  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    if (e.target.files?.length) {
-      setFiles((f) => [...f, ...Array.from(e.target.files)])
-    }
-  }
-  const removeFile = (idx: number) => setFiles((f) => f.filter((_, i) => i !== idx))
 
+  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (e.target.files && e.target.files.length > 0) {
+      // Fix: Add null check and proper type handling
+      const fileList = e.target.files
+      if (fileList) {
+        setFiles((prev) => [...prev, ...Array.from(fileList)])
+      }
+    }
+  }
+
+  const removeFile = (index: number) => {
+    setFiles((prev) => prev.filter((_, i) => i !== index))
+  }
+
+  // Form submission handler
   const onSubmit: SubmitHandler<FormValues> = async (data) => {
-    if (!files.length) {
-      toast({ title: "Error", description: "Please select at least one file.", variant: "destructive" })
+    if (files.length === 0) {
+      toast({
+        title: "Error",
+        description: "Please select at least one file to upload.",
+        variant: "destructive",
+      })
       return
     }
 
     setUploading(true)
-    try {
-      const total = files.length
-      for (let i = 0; i < total; i++) {
-        setCurrentIndex(i)
-        const file = files[i]
-        const fd = new FormData()
-        fd.append("file", file)
+    setUploadingFileIndex(0)
 
-        // let axios set Content-Type (with boundary)
-        const uploadRes = await api.post("/api/upload/media", fd, {
-          onUploadProgress: (e) => {
-            if (!e.lengthComputable) return
-            const percent = Math.round((e.loaded * 100) / e.total)
-            setProgress((i * 100 + percent) / total)
+    try {
+      const totalFiles = files.length
+      for (let i = 0; i < totalFiles; i++) {
+        const file = files[i]
+        setUploadingFileIndex(i)
+        const formData = new FormData()
+        formData.append("file", file)
+
+        const uploadResponse = await api.post("/api/upload/media", formData, {
+          headers: { "Content-Type": "multipart/form-data" },
+          onUploadProgress: (progressEvent) => {
+            if (progressEvent.lengthComputable && progressEvent.total) {
+              const percentCompleted = Math.round(
+                (progressEvent.loaded * 100) / progressEvent.total
+              )
+              const fileWeight = 100 / totalFiles
+              const currentProgress = i * fileWeight + (percentCompleted / 100) * fileWeight
+              setUploadProgress(currentProgress)
+            }
           },
         })
 
-        const { url, thumbnail_url } = uploadRes.data
+        const fileUrl = uploadResponse.data.url
+        const thumbnailUrl = uploadResponse.data.thumbnail_url || ""
+
         const mediaType = file.type.startsWith("image/")
           ? "photo"
           : file.type.startsWith("video/")
           ? "video"
           : "music"
 
-        await api.post("/api/media/", {
+        const mediaData = {
           title: data.title,
-          url,
-          thumbnail_url,
+          url: fileUrl,
+          thumbnail_url: thumbnailUrl,
           type: mediaType,
           category_id: data.category,
-          tags: data.tags,
-          description: data.description || "",
           is_premium: false,
-        })
+          tags: data.tags || [],
+          description: data.description || "",
+        }
+
+        await api.post("/api/media/", mediaData)
       }
 
-      setProgress(100)
-      toast({ title: "Success", description: "Upload complete!", variant: "default" })
+      setUploadProgress(100)
+      toast({
+        title: "Success",
+        description: "Your content has been uploaded successfully.",
+        variant: "default",
+      })
+
       form.reset()
       setFiles([])
       router.push(from)
-    } catch (err) {
-      let message = "Upload failed. Please try again."
-      if (axios.isAxiosError(err)) {
-        // server‑sent
-        message = err.response?.data?.message || err.message
-      } else if (err instanceof Error) {
-        message = err.message
+    } catch (error: any) {
+      console.error("Upload error:", error)
+      console.error("Error type:", typeof error)
+      console.error("Error constructor:", error?.constructor?.name)
+      console.error("Error keys:", error ? Object.keys(error) : 'null')
+      
+      // Enhanced error handling - check for custom error object first
+      let errorMessage = "Failed to upload content. Please try again."
+      
+      // Check for custom error object with these specific keys
+      if (error?.message) {
+        errorMessage = error.message
+      } else if (error?.error) {
+        errorMessage = typeof error.error === 'string' ? error.error : JSON.stringify(error.error)
+      } else if (error?.details) {
+        errorMessage = typeof error.details === 'string' ? error.details : JSON.stringify(error.details)
+      } 
+      // Check for standard Axios error response
+      else if (error?.response?.data?.message) {
+        errorMessage = error.response.data.message
+      } else if (error?.response?.data) {
+        errorMessage = typeof error.response.data === 'string' 
+          ? error.response.data 
+          : JSON.stringify(error.response.data)
+      } else if (error?.response?.statusText) {
+        errorMessage = `HTTP ${error.response.status}: ${error.response.statusText}`
+      } else if (typeof error === 'string') {
+        errorMessage = error
+      } else if (error && typeof error === 'object') {
+        // For cases where error is an object but not a standard Error
+        errorMessage = JSON.stringify(error)
       }
-      toast({ title: "Error", description: message, variant: "destructive" })
+
+      toast({
+        title: "Upload Failed",
+        description: errorMessage,
+        variant: "destructive",
+      })
     } finally {
       setUploading(false)
-      setCurrentIndex(-1)
-      setProgress(0)
+      setUploadingFileIndex(-1)
+      setUploadProgress(0)
     }
   }
-
 
   return (
     <section className="py-12">

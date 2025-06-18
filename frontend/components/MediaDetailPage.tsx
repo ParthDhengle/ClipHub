@@ -2,19 +2,11 @@
 
 import { useState, useEffect } from "react"
 import { useRouter, useParams } from "next/navigation"
-import { Search, Filter, Download, Heart, Eye, User } from "lucide-react"
+import { Download, Heart, Eye, User } from "lucide-react"
 import { Button } from "@/components/ui/button"
-import { Input } from "@/components/ui/input"
 import { Badge } from "@/components/ui/badge"
 import { Card, CardContent } from "@/components/ui/card"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select"
 import { useToast } from "@/hooks/use-toast"
 import { auth } from "@/lib/firebase"
 import { useAuthState } from "react-firebase-hooks/auth"
@@ -57,15 +49,52 @@ export function MediaDetailPage() {
         const idToken = user ? await user.getIdToken() : null
         const headers = idToken ? { Authorization: `Bearer ${idToken}` } : {}
         const response = await api.get(`/api/media/${id}`, { headers })
-        setMedia(response.data)
+        const fetchedMedia = {
+          id: response.data.media_id,
+          title: response.data.title,
+          url: response.data.url,
+          thumbnail: response.data.thumbnail_url || response.data.url,
+          tags: response.data.tags,
+          likes: response.data.likes,
+          views: response.data.views,
+          downloads: response.data.downloads,
+          creator: {
+            name: response.data.creator?.name || "Unknown",
+            avatar: response.data.creator?.avatar || "/placeholder.svg",
+          },
+          category: response.data.category_id,
+          isPremium: response.data.is_premium,
+          type: response.data.type,
+          duration: response.data.duration,
+          itemCount: response.data.item_count,
+        }
+        setMedia(fetchedMedia)
 
-        // Fetch suggested media
-        const suggestedResponse = await api.get(`/api/media?category=${response.data.category}&excludeId=${id}`, { headers })
-        setSuggestedMedia(suggestedResponse.data.items.slice(0, 4))
+        const suggestedResponse = await api.get(`/api/media?category=${fetchedMedia.category}&excludeId=${id}`, { headers })
+        const suggestedItems = suggestedResponse.data.items.slice(0, 4).map((item: any) => ({
+          id: item.media_id,
+          title: item.title,
+          url: item.url,
+          thumbnail: item.thumbnail_url || item.url,
+          tags: item.tags,
+          likes: item.likes,
+          views: item.views,
+          downloads: item.downloads,
+          creator: {
+            name: item.creator?.name || "Unknown",
+            avatar: item.creator?.avatar || "/placeholder.svg",
+          },
+          category: item.category_id,
+          isPremium: item.is_premium,
+          type: item.type,
+          duration: item.duration,
+          itemCount: item.item_count,
+        }))
+        setSuggestedMedia(suggestedItems)
       } catch (error: any) {
         toast({
           title: "Error",
-          description: error.response?.data?.detail || "Media not found",
+          description: error.message || "Media not found",
           variant: "destructive",
         })
         setMedia(null)
@@ -104,7 +133,7 @@ export function MediaDetailPage() {
     } catch (error: any) {
       toast({
         title: "Error",
-        description: error.response?.data?.detail || "Failed to update like",
+        description: error.message || "Failed to update like",
         variant: "destructive",
       })
     }
@@ -229,16 +258,10 @@ export function MediaDetailPage() {
                       size="sm"
                       variant="secondary"
                       className="h-8 w-8 p-0"
-                      onClick={(e) => {
-                        e.stopPropagation()
-                        handleLike()
-                      }}
                     >
-                      <Heart 
-                        className={`h-4 w-4 ${liked ? 'fill-red-500 text-red-500' : ''}`} 
-                      />
+                      <Heart className="h-4 w-4" />
                     </Button>
-                    <Button size="sm" variant="secondary" className="h-8 w-8 p-0" onClick={(e) => e.stopPropagation()}>
+                    <Button size="sm" variant="secondary" className="h-8 w-8 p-0">
                       <Download className="h-4 w-4" />
                     </Button>
                   </div>

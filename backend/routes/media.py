@@ -1,6 +1,6 @@
 from fastapi import APIRouter, Depends, HTTPException
 from models.media import MediaCreate, MediaInDB
-from services.media_service import create_media, get_media, list_media
+from services.media_service import create_media, get_media, list_media, like_media, unlike_media, download_media, view_media
 from middleware.auth import get_current_user
 from typing import List, Dict
 import logging
@@ -38,3 +38,47 @@ async def list_media_endpoint(current_user: Dict = Depends(get_current_user)):
     media_list = await list_media(current_user["user_id"])
     logger.info(f"Found {len(media_list)} media items for user: {current_user['user_id']}")
     return media_list
+
+@router.post("/{media_id}/like")
+async def like_media_endpoint(media_id: str, current_user: Dict = Depends(get_current_user)):
+    logger.info(f"User {current_user['user_id']} liking media: {media_id}")
+    try:
+        await like_media(media_id, current_user["user_id"])
+        logger.info(f"Media liked: {media_id} by user: {current_user['user_id']}")
+        return {"status": "success"}
+    except Exception as e:
+        logger.error(f"Error liking media: {str(e)}")
+        raise HTTPException(status_code=500, detail=f"Failed to like media: {str(e)}")
+
+@router.post("/{media_id}/unlike")
+async def unlike_media_endpoint(media_id: str, current_user: Dict = Depends(get_current_user)):
+    logger.info(f"User {current_user['user_id']} unliking media: {media_id}")
+    try:
+        await unlike_media(media_id, current_user["user_id"])
+        logger.info(f"Media unliked: {media_id} by user: {current_user['user_id']}")
+        return {"status": "success"}
+    except Exception as e:
+        logger.error(f"Error unliking media: {str(e)}")
+        raise HTTPException(status_code=500, detail=f"Failed to unlike media: {str(e)}")
+
+@router.post("/{media_id}/download")
+async def download_media_endpoint(media_id: str, current_user: Dict = Depends(get_current_user)):
+    logger.info(f"User {current_user['user_id']} downloading media: {media_id}")
+    try:
+        await download_media(media_id, current_user["user_id"])
+        logger.info(f"Media downloaded: {media_id} by user: {current_user['user_id']}")
+        return {"status": "success"}
+    except Exception as e:
+        logger.error(f"Error downloading media: {str(e)}")
+        raise HTTPException(status_code=500, detail=f"Failed to download media: {str(e)}")
+
+@router.post("/{media_id}/view")
+async def view_media_endpoint(media_id: str, current_user: Dict = Depends(get_current_user)):
+    logger.info(f"User {current_user['user_id']} viewing media: {media_id}")
+    try:
+        await view_media(media_id, current_user["user_id"])
+        logger.info(f"Media viewed: {media_id} by user: {current_user['user_id']}")
+        return {"status": "success"}
+    except Exception as e:
+        logger.error(f"Error viewing media: {str(e)}")
+        raise HTTPException(status_code=500, detail=f"Failed to view media: {str(e)}")

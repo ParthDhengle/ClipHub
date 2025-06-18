@@ -62,11 +62,11 @@ export function MediaGallery() {
         url: item.url,
         thumbnail: item.thumbnail,
         type: item.type,
-        creator: item.creator.name,
+        creator: item.creator?.name || 'Unknown',
         downloads: item.downloads.toLocaleString(),
         likes: item.likes.toLocaleString(),
         views: item.views.toLocaleString(),
-        avatar: item.creator.avatar,
+        avatar: item.creator?.avatar || "/placeholder.svg",
         category: item.category,
         duration: item.duration,
       })))
@@ -86,10 +86,23 @@ export function MediaGallery() {
 
     // Optional: Real-time Firestore listener
     const unsubscribe = onSnapshot(collection(db, "media"), (snapshot) => {
-      const fetchedMedia = snapshot.docs.map(doc => ({
-        id: doc.id,
-        ...doc.data(),
-      } as MediaItem))
+      const fetchedMedia = snapshot.docs.map(doc => {
+        const data = doc.data()
+        return {
+          id: doc.id,
+          title: data.title || '',
+          url: data.url || '',
+          thumbnail: data.thumbnail || "/placeholder.svg",
+          type: data.type || 'photo',
+          creator: data.creator || 'Unknown',
+          downloads: data.downloads || '0',
+          likes: data.likes || '0',
+          views: data.views || '0',
+          avatar: data.avatar || "/placeholder.svg",
+          category: data.category || 'Uncategorized',
+          duration: data.duration,
+        } as MediaItem
+      })
       setMediaItems(fetchedMedia)
       setLoading(false)
     }, (error) => {
@@ -189,8 +202,8 @@ export function MediaGallery() {
         <Tabs value={activeTab} onValueChange={setActiveTab} className="mb-8">
           <TabsList className="grid w-full grid-cols-4 max-w-md">
             <TabsTrigger value="all">All</TabsTrigger>
-            <TabsTrigger value="photo">Photos</TabsTrigger>
-            <TabsTrigger value="video">Videos</TabsTrigger>
+            <TabsTrigger value="photos">Photos</TabsTrigger>
+            <TabsTrigger value="videos">Videos</TabsTrigger>
             <TabsTrigger value="audio">Audio</TabsTrigger>
           </TabsList>
 
@@ -265,7 +278,7 @@ export function MediaGallery() {
                           <div className="flex items-center space-x-2">
                             <Avatar className="h-6 w-6 border border-white">
                               <AvatarImage src={item.avatar || "/placeholder.svg"} />
-                              <AvatarFallback>{item.creator.charAt(0)}</AvatarFallback>
+                              <AvatarFallback>{item.creator?.charAt(0) || 'U'}</AvatarFallback>
                             </Avatar>
                             <span className="text-white text-sm font-medium">{item.creator}</span>
                           </div>
@@ -300,14 +313,16 @@ export function MediaGallery() {
             </div>
           </TabsContent>
 
-          <TabsContent value="photo">
+          <TabsContent value="photos" className="mt-8">
             <div className="columns-1 sm:columns-2 lg:columns-3 xl:columns-4 gap-4 space-y-4">
               {mediaItems
                 .filter((item) => item.type === "photo")
-                .map((item) => (
+                .map((item, index) => (
                   <Card
                     key={item.id}
                     className="break-inside-avoid overflow-hidden group cursor-pointer transition-all duration-300 hover:shadow-xl"
+                    onMouseEnter={() => setHoveredItem(index)}
+                    onMouseLeave={() => setHoveredItem(null)}
                     onClick={() => router.push(`/photos/${item.id}`)}
                   >
                     <div className="relative">
@@ -322,7 +337,7 @@ export function MediaGallery() {
                             <div className="flex items-center space-x-2">
                               <Avatar className="h-6 w-6 border border-white">
                                 <AvatarImage src={item.avatar || "/placeholder.svg"} />
-                                <AvatarFallback>{item.creator.charAt(0)}</AvatarFallback>
+                                <AvatarFallback>{item.creator?.charAt(0) || 'U'}</AvatarFallback>
                               </Avatar>
                               <span className="text-white text-sm">{item.creator}</span>
                             </div>
@@ -345,14 +360,16 @@ export function MediaGallery() {
             </div>
           </TabsContent>
 
-          <TabsContent value="video">
+          <TabsContent value="videos" className="mt-8">
             <div className="columns-1 sm:columns-2 lg:columns-3 xl:columns-4 gap-4 space-y-4">
               {mediaItems
                 .filter((item) => item.type === "video")
-                .map((item) => (
+                .map((item, index) => (
                   <Card
                     key={item.id}
                     className="break-inside-avoid overflow-hidden group cursor-pointer transition-all duration-300 hover:shadow-xl"
+                    onMouseEnter={() => setHoveredItem(index)}
+                    onMouseLeave={() => setHoveredItem(null)}
                     onClick={() => router.push(`/videos/${item.id}`)}
                   >
                     <div className="relative">
@@ -362,7 +379,7 @@ export function MediaGallery() {
                         className="w-full object-cover transition-transform duration-300 group-hover:scale-105"
                       />
                       <div className="absolute inset-0 flex items-center justify-center">
-                        <div className="w-16 h-16 bg-black/70 rounded-full flex items-center justify-center">
+                        <div className="w-16 h-16 bg-black/70 rounded-full flex items-center justify-center group-hover:bg-black/80 transition-colors">
                           <Play className="h-8 w-8 text-white ml-1" />
                         </div>
                       </div>
@@ -382,14 +399,16 @@ export function MediaGallery() {
             </div>
           </TabsContent>
 
-          <TabsContent value="audio">
+          <TabsContent value="audio" className="mt-8">
             <div className="columns-1 sm:columns-2 lg:columns-3 xl:columns-4 gap-4 space-y-4">
               {mediaItems
                 .filter((item) => item.type === "audio")
-                .map((item) => (
+                .map((item, index) => (
                   <Card
                     key={item.id}
                     className="break-inside-avoid overflow-hidden group cursor-pointer transition-all duration-300 hover:shadow-xl"
+                    onMouseEnter={() => setHoveredItem(index)}
+                    onMouseLeave={() => setHoveredItem(null)}
                     onClick={() => router.push(`/music/${item.id}`)}
                   >
                     <div className="relative">
