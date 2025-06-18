@@ -20,7 +20,14 @@ async def create_media(user_id: str, media_data: MediaCreate) -> MediaInDB:
     logger.info(f"Attempting to create media document: {doc_ref.id} with data: {media_dict}")
     try:
         doc_ref.set(media_dict)
-        logger.info(f"Media document created successfully: {doc_ref.id}")
+        # Fetch the document to get the actual timestamp
+        doc = doc_ref.get()
+        if doc.exists:
+            media_data_fetched = doc.to_dict()
+            logger.info(f"Media document created successfully: {doc_ref.id}")
+            return MediaInDB(**media_data_fetched)
+        else:
+            raise Exception("Document was not created")
     except Exception as e:
         logger.error(f"Failed to set media document: {str(e)}")
         raise
