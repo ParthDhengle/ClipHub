@@ -1,22 +1,24 @@
-"use client";
+// Modified frontend/upload-form.tsx
+"use client"
 
-import type React from "react";
-import { useState } from "react";
-import { useRouter } from "next/navigation";
-import { useAuth } from "../lib/auth-context";
-import { useForm } from "react-hook-form";
-import { zodResolver } from "@hookform/resolvers/zod";
-import * as z from "zod";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Textarea } from "@/components/ui/textarea";
-import { Label } from "@/components/ui/label";
-import { Checkbox } from "@/components/ui/checkbox";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Upload, ImageIcon, Video, Music, Info, X } from "lucide-react";
-import { useToast } from "@/hooks/use-toast";
-import api from "@/lib/api";
+import type React from "react"
+import { useState } from "react"
+import { useRouter, useSearchParams } from "next/navigation"
+import { useAuth } from "@/lib/auth-context"
+import { useForm } from "react-hook-form"
+import { zodResolver } from "@hookform/resolvers/zod"
+import * as z from "zod"
+import { Button } from "@/components/ui/button"
+import { Input } from "@/components/ui/input"
+import { Textarea } from "@/components/ui/textarea"
+import { Checkbox } from "@/components/ui/checkbox"
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
+import { Progress } from "@/components/ui/progress"
+import { Upload, ImageIcon, Video, Music, Info, X } from "lucide-react"
+import { useToast } from "@/hooks/use-toast"
+import api from "@/lib/api"
+import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form"
 
 // Define the form schema
 const formSchema = z.object({
@@ -28,19 +30,24 @@ const formSchema = z.object({
     .optional()
     .transform((val) => (val ? val.split(",").map((tag) => tag.trim()).filter((tag) => tag) : [])),
   license: z.literal(true, { message: "You must agree to the license terms" }),
-});
+})
 
-type FormValues = z.infer<typeof formSchema>;
+type FormValues = z.infer<typeof formSchema>
 
 export function UploadForm() {
-  const { user, loading } = useAuth();
-  const router = useRouter();
-  const { toast } = useToast();
-  const [files, setFiles] = useState<File[]>([]);
-  const [dragActive, setDragActive] = useState(false);
-  const [uploading, setUploading] = useState(false);
+  const { user, loading } = useAuth()
+  const router = useRouter()
+  const searchParams = useSearchParams()
+  const { toast } = useToast()
+  const [files, setFiles] = useState<File[]>([])
+  const [dragActive, setDragActive] = useState(false)
+  const [uploading, setUploading] = useState(false)
+  const [uploadProgress, setUploadProgress] = useState(0)
+  const [uploadingFileIndex, setUploadingFileIndex] = useState(-1)
 
-  // Form setup with react-hook-form
+  const from = searchParams.get('from') || '/dashboard'
+
+  // Form setup
   const form = useForm<FormValues>({
     resolver: zodResolver(formSchema),
     defaultValues: {
@@ -50,48 +57,39 @@ export function UploadForm() {
       tags: "",
       license: false,
     },
-  });
+  })
 
-  // Redirect to login if not authenticated
-  if (loading) {
-    return <div>Loading...</div>;
-  }
+  if (loading) return <div>Loading...</div>
   if (!user) {
-    router.push("/login");
-    return null;
+    router.push("/login")
+    return null
   }
 
   const handleDrag = (e: React.DragEvent) => {
-    e.preventDefault();
-    e.stopPropagation();
-    if (e.type === "dragenter" || e.type === "dragover") {
-      setDragActive(true);
-    } else if (e.type === "dragleave") {
-      setDragActive(false);
-    }
-  };
+    e.preventDefault()
+    e.stopPropagation()
+    if (e.type === "dragenter" || e.type === "dragover") setDragActive(true)
+    else if (e.type === "dragleave") setDragActive(false)
+  }
 
   const handleDrop = (e: React.DragEvent) => {
-    e.preventDefault();
-    e.stopPropagation();
-    setDragActive(false);
-
+    e.preventDefault()
+    e.stopPropagation()
+    setDragActive(false)
     if (e.dataTransfer.files && e.dataTransfer.files.length > 0) {
-      const newFiles = Array.from(e.dataTransfer.files);
-      setFiles((prev) => [...prev, ...newFiles]);
+      setFiles((prev) => [...prev, ...Array.from(e.dataTransfer.files)])
     }
-  };
+  }
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files && e.target.files.length > 0) {
-      const newFiles = Array.from(e.target.files);
-      setFiles((prev) => [...prev, ...newFiles]);
+      setFiles((prev) => [...prev, ...Array.from(e.target.files)])
     }
-  };
+  }
 
   const removeFile = (index: number) => {
-    setFiles((prev) => prev.filter((_, i) => i !== index));
-  };
+    setFiles((prev) => prev.filter((_, i) => i !== index))
+  }
 
   const onSubmit = async (data: FormValues) => {
     if (files.length === 0) {
@@ -99,64 +97,76 @@ export function UploadForm() {
         title: "Error",
         description: "Please select at least one file to upload.",
         variant: "destructive",
-      });
-      return;
+      })
+      return
     }
 
-    setUploading(true);
+    setUploading(true)
+    setUploadingFileIndex(0)
     try {
-      // Upload each file
-      for (const file of files) {
-        const formData = new FormData();
-        formData.append("file", file);
+      const totalFiles = files.length
+      for (let i = 0; i < totalFiles; i++) {
+        const file = files[i]
+        setUploadingFileIndex(i)
+        const formData = new FormData()
+        formData.append("file", file)
 
-        // Step 1: Upload the file
         const uploadResponse = await api.post("/api/upload/media", formData, {
           headers: { "Content-Type": "multipart/form-data" },
-        });
+          onUploadProgress: (progressEvent) => {
+            if (progressEvent.lengthComputable) {
+              const percentCompleted = Math.round((progressEvent.loaded * 100) / progressEvent.total)
+              const fileWeight = 100 / totalFiles
+              const currentProgress = (i * fileWeight) + (percentCompleted / 100 * fileWeight)
+              setUploadProgress(currentProgress)
+            }
+          },
+        })
 
-        const fileUrl = uploadResponse.data.url; // Assuming backend returns the uploaded file's URL
-        const thumbnailUrl = uploadResponse.data.thumbnail_url || ""; // Optional thumbnail URL
+        const fileUrl = uploadResponse.data.url
+        const thumbnailUrl = uploadResponse.data.thumbnail_url || ""
 
-        // Step 2: Create media entry with metadata
+        const mediaType = file.type.startsWith("image/")
+          ? "photo"
+          : file.type.startsWith("video/")
+          ? "video"
+          : "music"
+
         const mediaData = {
           title: data.title,
           url: fileUrl,
           thumbnail_url: thumbnailUrl,
-          type: file.type.startsWith("image/")
-            ? "photo"
-            : file.type.startsWith("video/")
-            ? "video"
-            : "music",
+          type: mediaType,
           category_id: data.category,
           is_premium: false,
           tags: data.tags || [],
           description: data.description || "",
-        };
+        }
 
-        await api.post("/api/media/", mediaData);
+        await api.post("/api/media/", mediaData)
       }
 
+      setUploadProgress(100)
       toast({
-        title: "Success!",
+        title: "Success",
         description: "Your content has been uploaded successfully.",
-        className: "bg-green-500 text-white",
-      });
+        variant: "success",
+      })
 
-      // Reset form and files
-      form.reset();
-      setFiles([]);
-      router.push("/dashboard"); // Redirect to dashboard after upload
+      form.reset()
+      setFiles([])
+      router.push(from)
     } catch (error: any) {
       toast({
         title: "Upload Failed",
         description: error.response?.data?.message || "Failed to upload content. Please try again.",
         variant: "destructive",
-      });
+      })
     } finally {
-      setUploading(false);
+      setUploading(false)
+      setUploadingFileIndex(-1)
     }
-  };
+  }
 
   return (
     <section className="py-12">
@@ -175,9 +185,16 @@ export function UploadForm() {
               </CardDescription>
             </CardHeader>
             <CardContent>
+              {uploading && (
+                <div className="mb-4">
+                  <Progress value={uploadProgress} className="w-full" />
+                  <p className="text-sm text-center mt-2">
+                    Uploading {files[uploadingFileIndex]?.name} ({Math.round(uploadProgress)}%)
+                  </p>
+                </div>
+              )}
               <Form {...form}>
                 <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
-                  {/* File Upload Area */}
                   <div
                     className={`border-2 border-dashed rounded-lg p-8 text-center mb-6 ${
                       dragActive ? "border-primary bg-primary/5" : "border-muted-foreground/20"
@@ -205,7 +222,6 @@ export function UploadForm() {
                     </label>
                   </div>
 
-                  {/* Selected Files */}
                   {files.length > 0 && (
                     <div className="mb-6">
                       <h3 className="font-medium mb-3">Selected Files ({files.length})</h3>
@@ -230,7 +246,6 @@ export function UploadForm() {
                     </div>
                   )}
 
-                  {/* File Details Form */}
                   <div className="space-y-6">
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                       <FormField
@@ -309,10 +324,7 @@ export function UploadForm() {
                       render={({ field }) => (
                         <FormItem className="flex items-start space-x-2">
                           <FormControl>
-                            <Checkbox
-                              checked={field.value}
-                              onCheckedChange={field.onChange}
-                            />
+                            <Checkbox checked={field.value} onCheckedChange={field.onChange} />
                           </FormControl>
                           <div className="grid gap-1.5 leading-none">
                             <FormLabel className="text-sm font-medium leading-none">
@@ -338,7 +350,7 @@ export function UploadForm() {
                       <Button
                         type="button"
                         variant="outline"
-                        onClick={() => router.push("/dashboard")}
+                        onClick={() => router.push(from)}
                         disabled={uploading}
                       >
                         Cancel
@@ -366,5 +378,5 @@ export function UploadForm() {
         </div>
       </div>
     </section>
-  );
+  )
 }

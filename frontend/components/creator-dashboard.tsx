@@ -27,7 +27,7 @@ import { useToast } from "@/hooks/use-toast"
 import { auth } from "@/lib/firebase"
 import { useAuthState } from "react-firebase-hooks/auth"
 import api from "@/lib/api"
-import { useRouter } from "next/navigation"
+import { useRouter, usePathname } from "next/navigation"
 
 interface Stat {
   title: string
@@ -64,6 +64,7 @@ export function CreatorDashboard() {
   const { toast } = useToast()
   const [user, userLoading] = useAuthState(auth)
   const router = useRouter()
+  const pathname = usePathname()
 
   useEffect(() => {
     if (!userLoading && !user) {
@@ -176,7 +177,11 @@ export function CreatorDashboard() {
                 <Bell className="h-4 w-4 mr-2" />
                 <span className="hidden sm:inline">Notifications</span>
               </Button>
-              <Button size="sm" className="bg-gradient-to-r from-orange-500 to-pink-500" onClick={() => router.push('/upload')}>
+              <Button
+                size="sm"
+                className="bg-gradient-to-r from-orange-500 to-pink-500"
+                onClick={() => router.push(`/upload?from=${encodeURIComponent(pathname)}`)}
+              >
                 <Plus className="h-4 w-4 mr-2" />
                 Upload Content
               </Button>
