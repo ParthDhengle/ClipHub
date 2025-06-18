@@ -1,12 +1,11 @@
-// Modified frontend/upload-form.tsx
 "use client"
 
-import type React from "react"
-import { useState } from "react"
+import React, { useState } from "react"
 import { useRouter, useSearchParams } from "next/navigation"
 import { useAuth } from "@/lib/auth-context"
-import { useForm } from "react-hook-form"
+import { useForm, SubmitHandler } from "react-hook-form"
 import { zodResolver } from "@hookform/resolvers/zod"
+import axios, { AxiosError } from "axios"
 import * as z from "zod"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -20,16 +19,23 @@ import { useToast } from "@/hooks/use-toast"
 import api from "@/lib/api"
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form"
 
-// Define the form schema
+// --- schema & types ---
 const formSchema = z.object({
-  title: z.string().min(3, "Title must be at least 3 characters").max(100, "Title is too long"),
-  category: z.string().nonempty("Please select a category"),
-  description: z.string().max(500, "Description cannot exceed 500 characters").optional(),
+  title: z.string().min(3).max(100),
+  category: z.string().nonempty(),
+  description: z.string().max(500).optional(),
   tags: z
     .string()
     .optional()
-    .transform((val) => (val ? val.split(",").map((tag) => tag.trim()).filter((tag) => tag) : [])),
-  license: z.literal(true, { message: "You must agree to the license terms" }),
+    .transform((val) =>
+      val
+        ? val
+            .split(",")
+            .map((t) => t.trim())
+            .filter(Boolean)
+        : []
+    ),
+  license: z.boolean().refine((v) => v, { message: "You must agree to the license terms" }),
 })
 
 type FormValues = z.infer<typeof formSchema>
@@ -38,16 +44,15 @@ export function UploadForm() {
   const { user, loading } = useAuth()
   const router = useRouter()
   const searchParams = useSearchParams()
+  const from = searchParams.get("from") || "/dashboard"
   const { toast } = useToast()
+
   const [files, setFiles] = useState<File[]>([])
   const [dragActive, setDragActive] = useState(false)
   const [uploading, setUploading] = useState(false)
-  const [uploadProgress, setUploadProgress] = useState(0)
-  const [uploadingFileIndex, setUploadingFileIndex] = useState(-1)
+  const [progress, setProgress] = useState(0)
+  const [currentIndex, setCurrentIndex] = useState(-1)
 
-  const from = searchParams.get('from') || '/dashboard'
-
-  // Form setup
   const form = useForm<FormValues>({
     resolver: zodResolver(formSchema),
     defaultValues: {
@@ -59,114 +64,97 @@ export function UploadForm() {
     },
   })
 
-  if (loading) return <div>Loading...</div>
+  if (loading) return <div>Loading…</div>
   if (!user) {
     router.push("/login")
     return null
   }
 
+  // drag & drop…
   const handleDrag = (e: React.DragEvent) => {
     e.preventDefault()
     e.stopPropagation()
-    if (e.type === "dragenter" || e.type === "dragover") setDragActive(true)
-    else if (e.type === "dragleave") setDragActive(false)
+    setDragActive(e.type === "dragenter" || e.type === "dragover")
   }
-
   const handleDrop = (e: React.DragEvent) => {
     e.preventDefault()
     e.stopPropagation()
     setDragActive(false)
-    if (e.dataTransfer.files && e.dataTransfer.files.length > 0) {
-      setFiles((prev) => [...prev, ...Array.from(e.dataTransfer.files)])
+    if (e.dataTransfer.files.length) {
+      setFiles((f) => [...f, ...Array.from(e.dataTransfer.files)])
     }
   }
-
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    if (e.target.files && e.target.files.length > 0) {
-      setFiles((prev) => [...prev, ...Array.from(e.target.files)])
+    if (e.target.files?.length) {
+      setFiles((f) => [...f, ...Array.from(e.target.files)])
     }
   }
+  const removeFile = (idx: number) => setFiles((f) => f.filter((_, i) => i !== idx))
 
-  const removeFile = (index: number) => {
-    setFiles((prev) => prev.filter((_, i) => i !== index))
-  }
-
-  const onSubmit = async (data: FormValues) => {
-    if (files.length === 0) {
-      toast({
-        title: "Error",
-        description: "Please select at least one file to upload.",
-        variant: "destructive",
-      })
+  const onSubmit: SubmitHandler<FormValues> = async (data) => {
+    if (!files.length) {
+      toast({ title: "Error", description: "Please select at least one file.", variant: "destructive" })
       return
     }
 
     setUploading(true)
-    setUploadingFileIndex(0)
     try {
-      const totalFiles = files.length
-      for (let i = 0; i < totalFiles; i++) {
+      const total = files.length
+      for (let i = 0; i < total; i++) {
+        setCurrentIndex(i)
         const file = files[i]
-        setUploadingFileIndex(i)
-        const formData = new FormData()
-        formData.append("file", file)
+        const fd = new FormData()
+        fd.append("file", file)
 
-        const uploadResponse = await api.post("/api/upload/media", formData, {
-          headers: { "Content-Type": "multipart/form-data" },
-          onUploadProgress: (progressEvent) => {
-            if (progressEvent.lengthComputable) {
-              const percentCompleted = Math.round((progressEvent.loaded * 100) / progressEvent.total)
-              const fileWeight = 100 / totalFiles
-              const currentProgress = (i * fileWeight) + (percentCompleted / 100 * fileWeight)
-              setUploadProgress(currentProgress)
-            }
+        // let axios set Content-Type (with boundary)
+        const uploadRes = await api.post("/api/upload/media", fd, {
+          onUploadProgress: (e) => {
+            if (!e.lengthComputable) return
+            const percent = Math.round((e.loaded * 100) / e.total)
+            setProgress((i * 100 + percent) / total)
           },
         })
 
-        const fileUrl = uploadResponse.data.url
-        const thumbnailUrl = uploadResponse.data.thumbnail_url || ""
-
+        const { url, thumbnail_url } = uploadRes.data
         const mediaType = file.type.startsWith("image/")
           ? "photo"
           : file.type.startsWith("video/")
           ? "video"
           : "music"
 
-        const mediaData = {
+        await api.post("/api/media/", {
           title: data.title,
-          url: fileUrl,
-          thumbnail_url: thumbnailUrl,
+          url,
+          thumbnail_url,
           type: mediaType,
           category_id: data.category,
-          is_premium: false,
-          tags: data.tags || [],
+          tags: data.tags,
           description: data.description || "",
-        }
-
-        await api.post("/api/media/", mediaData)
+          is_premium: false,
+        })
       }
 
-      setUploadProgress(100)
-      toast({
-        title: "Success",
-        description: "Your content has been uploaded successfully.",
-        variant: "success",
-      })
-
+      setProgress(100)
+      toast({ title: "Success", description: "Upload complete!", variant: "default" })
       form.reset()
       setFiles([])
       router.push(from)
-    } catch (error: any) {
-      toast({
-        title: "Upload Failed",
-        description: error.response?.data?.message || "Failed to upload content. Please try again.",
-        variant: "destructive",
-      })
+    } catch (err) {
+      let message = "Upload failed. Please try again."
+      if (axios.isAxiosError(err)) {
+        // server‑sent
+        message = err.response?.data?.message || err.message
+      } else if (err instanceof Error) {
+        message = err.message
+      }
+      toast({ title: "Error", description: message, variant: "destructive" })
     } finally {
       setUploading(false)
-      setUploadingFileIndex(-1)
+      setCurrentIndex(-1)
+      setProgress(0)
     }
   }
+
 
   return (
     <section className="py-12">
@@ -174,14 +162,17 @@ export function UploadForm() {
         <div className="max-w-3xl mx-auto">
           <div className="text-center mb-8">
             <h1 className="text-3xl font-bold mb-2">Upload Your Content</h1>
-            <p className="text-muted-foreground">Share your photos, videos, or music with the ClipHub community</p>
+            <p className="text-muted-foreground">
+              Share your photos, videos, or music with the ClipHub community
+            </p>
           </div>
 
           <Card>
             <CardHeader>
               <CardTitle>Upload Files</CardTitle>
               <CardDescription>
-                Drag and drop your files or click to browse. Supported formats: JPG, PNG, MP4, MOV, MP3, WAV.
+                Drag and drop your files or click to browse. Supported formats: JPG, PNG, MP4, MOV,
+                MP3, WAV.
               </CardDescription>
             </CardHeader>
             <CardContent>
@@ -227,11 +218,20 @@ export function UploadForm() {
                       <h3 className="font-medium mb-3">Selected Files ({files.length})</h3>
                       <div className="space-y-2">
                         {files.map((file, index) => (
-                          <div key={index} className="flex items-center justify-between p-3 bg-muted/50 rounded-lg">
+                          <div
+                            key={index}
+                            className="flex items-center justify-between p-3 bg-muted/50 rounded-lg"
+                          >
                             <div className="flex items-center">
-                              {file.type.startsWith("image/") && <ImageIcon className="h-5 w-5 mr-2" />}
-                              {file.type.startsWith("video/") && <Video className="h-5 w-5 mr-2" />}
-                              {file.type.startsWith("audio/") && <Music className="h-5 w-5 mr-2" />}
+                              {file.type.startsWith("image/") && (
+                                <ImageIcon className="h-5 w-5 mr-2" />
+                              )}
+                              {file.type.startsWith("video/") && (
+                                <Video className="h-5 w-5 mr-2" />
+                              )}
+                              {file.type.startsWith("audio/") && (
+                                <Music className="h-5 w-5 mr-2" />
+                              )}
                               <span className="truncate max-w-xs">{file.name}</span>
                               <span className="text-xs text-muted-foreground ml-2">
                                 ({(file.size / (1024 * 1024)).toFixed(2)} MB)
@@ -311,7 +311,11 @@ export function UploadForm() {
                         <FormItem>
                           <FormLabel>Tags (comma separated)</FormLabel>
                           <FormControl>
-                            <Input placeholder="nature, landscape, mountains, sky" {...field} />
+                            <Input 
+                              placeholder="nature, landscape, mountains, sky" 
+                              value={Array.isArray(field.value) ? field.value.join(", ") : field.value || ""}
+                              onChange={(e) => field.onChange(e.target.value)}
+                            />
                           </FormControl>
                           <FormMessage />
                         </FormItem>
@@ -324,11 +328,15 @@ export function UploadForm() {
                       render={({ field }) => (
                         <FormItem className="flex items-start space-x-2">
                           <FormControl>
-                            <Checkbox checked={field.value} onCheckedChange={field.onChange} />
+                            <Checkbox
+                              checked={field.value}
+                              onCheckedChange={field.onChange}
+                            />
                           </FormControl>
                           <div className="grid gap-1.5 leading-none">
                             <FormLabel className="text-sm font-medium leading-none">
-                              I confirm that I have all necessary rights to the content I'm uploading
+                              I confirm that I have all necessary rights to the content I&apos;m
+                              uploading
                             </FormLabel>
                             <p className="text-sm text-muted-foreground">
                               By uploading, you agree to our{" "}
@@ -370,8 +378,9 @@ export function UploadForm() {
             <div>
               <h3 className="font-medium">Content Guidelines</h3>
               <p className="text-sm text-muted-foreground">
-                Please ensure your content meets our quality standards and doesn't violate any copyright laws.
-                High-resolution images, properly tagged content, and original work perform best on our platform.
+                Please ensure your content meets our quality standards and doesn&apos;t violate any
+                copyright laws. High-resolution images, properly tagged content, and original work
+                perform best on our platform.
               </p>
             </div>
           </div>

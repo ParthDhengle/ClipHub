@@ -9,6 +9,7 @@ import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '
 import { Checkbox } from '@/components/ui/checkbox'
 import { useToast } from '@/hooks/use-toast'
 import { saveUserInterests } from '@/lib/utils'
+import { useRouter } from 'next/navigation'
 
 const interestSchema = z.object({
   interests: z.array(z.string()).min(1, { message: 'Please select at least one interest' }),
@@ -23,6 +24,7 @@ interface InterestSelectionProps {
 
 export function InterestSelection({ onNext, onBack }: InterestSelectionProps) {
   const { toast } = useToast()
+  const router = useRouter()
   const form = useForm<InterestFormValues>({
     resolver: zodResolver(interestSchema),
     defaultValues: {
@@ -45,6 +47,10 @@ export function InterestSelection({ onNext, onBack }: InterestSelectionProps) {
       className: 'bg-green-500 text-white',
     })
     onNext()
+  }
+
+  const handleSkip = () => {
+    router.push('/')
   }
 
   return (
@@ -84,9 +90,12 @@ export function InterestSelection({ onNext, onBack }: InterestSelectionProps) {
                 </FormItem>
               )}
             />
-            <div className="flex justify-between">
+            <div className="flex justify-between items-center">
               <Button type="button" variant="outline" onClick={onBack}>
                 Back
+              </Button>
+              <Button type="button" variant="ghost" onClick={handleSkip}>
+                Skip to Home
               </Button>
               <Button type="submit" className="bg-blue-600 text-white hover:bg-blue-700">
                 Next

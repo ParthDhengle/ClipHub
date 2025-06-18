@@ -68,9 +68,6 @@ const sampleVideos: Video[] = [
   },
 ]
 
-
-
-
 export function VideosGallery() {
   const router = useRouter()
   const [videos, setVideos] = useState<Video[]>(sampleVideos)

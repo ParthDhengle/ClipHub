@@ -32,9 +32,10 @@ class Settings(BaseSettings):
     # Storage
     STORAGE_BUCKET: Optional[str] = None
     UPLOAD_DIR: str = str(Path(__file__).parent.parent / "uploads")
-    MEGA_EMAIL: str
-    MEGA_PASSWORD: str
-    
+    CLOUDINARY_CLOUD_NAME: str
+    CLOUDINARY_API_KEY: str
+    CLOUDINARY_API_SECRET: str
+        
     @property
     def allowed_origins_list(self) -> List[str]:
         """Convert ALLOWED_ORIGINS string to list"""

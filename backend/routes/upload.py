@@ -7,5 +7,5 @@ router = APIRouter()
 
 @router.post("/media")
 async def upload_media(file: UploadFile = File(...), current_user: Dict = Depends(get_current_user)):
-    url = await upload_file(file, "media")
-    return {"url": url}
+    upload_result = await upload_file(file, "media")
+    return upload_result
