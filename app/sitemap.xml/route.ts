@@ -18,15 +18,14 @@ export async function GET() {
     ${staticPages
       .map((page) => {
         return `
-          <url>
-            <loc>${baseUrl}${page}</loc>
-          </url>
-        `;
+        <url>
+          <loc>${baseUrl}${page}</loc>
+        </url>`;
       })
       .join("")}
   </urlset>`;
 
-  return new Response(sitemap, {
+  return new Response(sitemap.trim(), {
     headers: {
       "Content-Type": "application/xml",
     },
