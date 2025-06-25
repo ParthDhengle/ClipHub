@@ -19,7 +19,8 @@ import {
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuTrigger,
-  DropdownMenuSeparator
+  DropdownMenuSeparator,
+  DropdownMenuLabel
 } from "@/components/ui/dropdown-menu"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { useAuthState } from "react-firebase-hooks/auth"
@@ -71,34 +72,45 @@ export function Header() {
   // Show a minimal loading state while auth is resolving
   if (loading) {
     return (
-      <header className="fixed top-0 left-0 right-0 z-50 bg-background/80 backdrop-blur-md">
-        <div className="container mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex h-16 items-center justify-between">
-            <Link href="/" className="flex items-center space-x-2">
-              <div className="relative">
-                <div className="w-8 h-8 bg-black rounded-lg flex items-center justify-center shadow-lg">
-                  <svg
-                    xmlns="http://www.w3.org/2000/svg"
-                    viewBox="0 0 24 24"
-                    fill="none"
-                    stroke="currentColor"
-                    strokeWidth="2.5"
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    className="h-5 w-5 text-white"
-                  >
-                    <path d="M14.5 4h-5L7 7H4a2 2 0 0 0-2 2v9a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2V9a2 2 0 0 0-2-2h-3l-2.5-3z" />
-                    <circle cx="12" cy="13" r="3" />
-                  </svg>
-                </div>
-                <div className="absolute -top-1 -right-1 w-3 h-3 bg-green-400 rounded-full animate-pulse"></div>
-              </div>
-              <span className="text-xl font-bold text-black">ClipHub</span>
-            </Link>
-            <div>Loading...</div>
+    <header className="fixed top-0 left-0 right-0 z-50 bg-background/80 backdrop-blur-md shadow-sm">
+  <div className="container mx-auto px-4 sm:px-6 lg:px-8">
+    <div className="flex h-16 items-center justify-between">
+      {/* Logo with India Tag */}
+      <Link href="/" className="flex items-center space-x-2">
+        <div className="relative">
+          <div className="w-8 h-8 bg-black rounded-lg flex items-center justify-center shadow-lg">
+            <svg
+              xmlns="http://www.w3.org/2000/svg"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="2.5"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              className="h-5 w-5 text-white"
+            >
+              <path d="M14.5 4h-5L7 7H4a2 2 0 0 0-2 2v9a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2V9a2 2 0 0 0-2-2h-3l-2.5-3z" />
+              <circle cx="12" cy="13" r="3" />
+            </svg>
           </div>
+          <div className="absolute -top-1 -right-1 w-3 h-3 bg-green-400 rounded-full animate-pulse"></div>
         </div>
-      </header>
+
+        {/* ClipHub Name */}
+        <span className="text-xl font-bold text-black dark:text-white">ClipHub</span>
+
+        {/* Small India Tag */}
+        <span className="text-xs bg-orange-100 text-orange-600 dark:bg-orange-900/40 dark:text-orange-300 font-semibold px-2 py-0.5 rounded-full shadow-sm animate-fade-in">
+          India
+        </span>
+      </Link>
+
+      {/* Placeholder */}
+      <div className="text-sm text-gray-500 dark:text-gray-400">Loading...</div>
+    </div>
+  </div>
+</header>
+
     )
   }
 
@@ -136,19 +148,92 @@ export function Header() {
                 Explore
                 <ChevronDown className="ml-1 h-4 w-4" />
               </DropdownMenuTrigger>
-              <DropdownMenuContent align="start">
-                <DropdownMenuItem>
-                  <Link href="/photos">Photos</Link>
+              <DropdownMenuContent align="start" className="w-72 p-2 rounded-xl shadow-lg bg-white dark:bg-zinc-900 max-h-96 overflow-y-auto">
+                {/* Top Categories */}
+                <DropdownMenuItem className="hover:bg-zinc-100 dark:hover:bg-zinc-800 rounded-md">
+                  <Link href="/photos" className="flex items-center gap-2 w-full">
+                    📸 <span>Photos</span>
+                  </Link>
                 </DropdownMenuItem>
-                <DropdownMenuItem>
-                  <Link href="/videos">Videos</Link>
+                <DropdownMenuItem className="hover:bg-zinc-100 dark:hover:bg-zinc-800 rounded-md">
+                  <Link href="/videos" className="flex items-center gap-2 w-full">
+                    🎥 <span>Videos</span>
+                  </Link>
                 </DropdownMenuItem>
-                <DropdownMenuItem>
-                  <Link href="/music">Music</Link>
+                <DropdownMenuItem className="hover:bg-zinc-100 dark:hover:bg-zinc-800 rounded-md">
+                  <Link href="/music" className="flex items-center gap-2 w-full">
+                    🎵 <span>Music</span>
+                  </Link>
                 </DropdownMenuItem>
-                <DropdownMenuItem>
-                  <Link href="/collections">Collections</Link>
-                </DropdownMenuItem>
+                <div className="border-t border-gray-300 dark:border-gray-700 my-3" />
+                {/* Section: Caste & Community */}
+                <p className="text-xs font-semibold text-gray-500 dark:text-gray-400 pl-3 mb-1">🧍 Caste & Community</p>
+                {[
+                  ["Brahmin Rituals", "/culture/brahmin-rituals"],
+                  ["Rajput Traditions", "/culture/rajput-traditions"],
+                  ["Sikh Customs", "/culture/sikh-customs"],
+                  ["Jatav Art & Culture", "/culture/jatav-art"],
+                  ["Tribal Dances", "/culture/tribal-dances"],
+                  ["Muslim Rituals", "/culture/muslim-rituals"],
+                ].map(([label, path]) => (
+                  <DropdownMenuItem key={path} className="hover:bg-zinc-100 dark:hover:bg-zinc-800 rounded-md">
+                    <Link href={path} className="pl-6 block w-full">{label}</Link>
+                  </DropdownMenuItem>
+                ))}
+                {/* Section: Festivals */}
+                <p className="text-xs font-semibold text-gray-500 dark:text-gray-400 pl-3 mt-3 mb-1">🎉 Indian Festivals</p>
+                {[
+                  ["Holi (Mathura, Barsana)", "/festivals/holi"],
+                  ["Diwali (North & South)", "/festivals/diwali"],
+                  ["Eid Celebrations", "/festivals/eid"],
+                  ["Pongal / Sankranti", "/festivals/pongal"],
+                  ["Navratri / Durga Puja", "/festivals/navratri"],
+                  ["Onam Festival", "/festivals/onam"],
+                ].map(([label, path]) => (
+                  <DropdownMenuItem key={path} className="hover:bg-zinc-100 dark:hover:bg-zinc-800 rounded-md">
+                    <Link href={path} className="pl-6 block w-full">{label}</Link>
+                  </DropdownMenuItem>
+                ))}
+                {/* Section: Rituals */}
+                <p className="text-xs font-semibold text-gray-500 dark:text-gray-400 pl-3 mt-3 mb-1">🌿 Rituals & Blessings</p>
+                {[
+                  ["Indian Weddings", "/rituals/wedding"],
+                  ["Griha Pravesh", "/rituals/housewarming"],
+                  ["Aarti & Bhajan", "/rituals/aarti"],
+                  ["Priest Blessings", "/rituals/blessings"],
+                  ["Langar & Feasts", "/rituals/feasts"],
+                ].map(([label, path]) => (
+                  <DropdownMenuItem key={path} className="hover:bg-zinc-100 dark:hover:bg-zinc-800 rounded-md">
+                    <Link href={path} className="pl-6 block w-full">{label}</Link>
+                  </DropdownMenuItem>
+                ))}
+                {/* Section: Folk Art */}
+                <p className="text-xs font-semibold text-gray-500 dark:text-gray-400 pl-3 mt-3 mb-1">🎭 Folk Art & Dance</p>
+                {[
+                  ["Kathakali (Kerala)", "/folk/kathakali"],
+                  ["Bhangra / Gidda", "/folk/bhangra"],
+                  ["Lavani (Maharashtra)", "/folk/lavani"],
+                  ["Yakshagana (Karnataka)", "/folk/yakshagana"],
+                  ["Chhau / Dandiya", "/folk/chhau"],
+                  ["Madhubani & Warli", "/folk/madhubani"],
+                ].map(([label, path]) => (
+                  <DropdownMenuItem key={path} className="hover:bg-zinc-100 dark:hover:bg-zinc-800 rounded-md">
+                    <Link href={path} className="pl-6 block w-full">{label}</Link>
+                  </DropdownMenuItem>
+                ))}
+                {/* Section: Attire */}
+                <p className="text-xs font-semibold text-gray-500 dark:text-gray-400 pl-3 mt-3 mb-1">👳 Regional Attire</p>
+                {[
+                  ["Rajasthani Dress", "/attire/rajasthani"],
+                  ["South Indian Veshti", "/attire/south-indian"],
+                  ["North-Eastern Wear", "/attire/northeast"],
+                  ["Marathi Nauvari Saree", "/attire/marathi"],
+                  ["Bengali Dhoti Kurta", "/attire/bengali"],
+                ].map(([label, path]) => (
+                  <DropdownMenuItem key={path} className="hover:bg-zinc-100 dark:hover:bg-zinc-800 rounded-md">
+                    <Link href={path} className="pl-6 block w-full">{label}</Link>
+                  </DropdownMenuItem>
+                ))}
               </DropdownMenuContent>
             </DropdownMenu>
             <Link href="/license" className="text-sm font-medium text-foreground">
