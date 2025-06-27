@@ -8,7 +8,8 @@ import {
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuTrigger,
-  DropdownMenuSeparator
+  DropdownMenuSeparator,
+  DropdownMenuLabel,
 } from "@/components/ui/dropdown-menu"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { useAuthState } from "react-firebase-hooks/auth"
@@ -68,7 +69,6 @@ export function Header() {
     <header className="absolute top-0 left-0 right-0 z-50 text-white bg-transparent">
       <div className="container mx-auto px-4 sm:px-6 lg:px-8">
         <div className="flex h-16 items-center justify-between">
-          {/* Logo */}
           <Link href="/" className="flex items-center space-x-2">
             <div className="relative">
               <div className="w-8 h-8 bg-black rounded-lg flex items-center justify-center shadow-lg">
@@ -79,7 +79,6 @@ export function Header() {
             <span className="text-xl font-bold text-white">ClipHub</span>
           </Link>
 
-          {/* Mobile Menu Button */}
           <button
             className="md:hidden focus:outline-none"
             onClick={() => setMenuOpen(!menuOpen)}
@@ -89,9 +88,74 @@ export function Header() {
 
           {/* Desktop Nav */}
           <nav className="hidden md:flex items-center space-x-6">
-            <Link href="/explore" className="text-sm font-medium text-white hover:underline">
-              Explore
-            </Link>
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button variant="ghost" className="text-sm font-medium text-white hover:underline">
+                  Explore
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent
+                align="start"
+                className="w-64 max-h-[400px] overflow-y-auto"
+              >
+                <DropdownMenuItem><Link href="/photos">Photos</Link></DropdownMenuItem>
+                <DropdownMenuItem><Link href="/videos">Videos</Link></DropdownMenuItem>
+                <DropdownMenuItem><Link href="/music">Music</Link></DropdownMenuItem>
+                <DropdownMenuItem><Link href="/collections">Collections</Link></DropdownMenuItem>
+
+                <DropdownMenuSeparator />
+
+                <DropdownMenuLabel>Indian Culture</DropdownMenuLabel>
+                <DropdownMenuItem><Link href="/festivals/holi">Holi</Link></DropdownMenuItem>
+                <DropdownMenuItem><Link href="/festivals/diwali">Diwali</Link></DropdownMenuItem>
+                <DropdownMenuItem><Link href="/festivals/navratri">Navratri</Link></DropdownMenuItem>
+                <DropdownMenuItem><Link href="/festivals/durga-puja">Durga Puja</Link></DropdownMenuItem>
+                <DropdownMenuItem><Link href="/festivals/raksha-bandhan">Raksha Bandhan</Link></DropdownMenuItem>
+                <DropdownMenuItem><Link href="/festivals/lohri">Lohri</Link></DropdownMenuItem>
+
+                <DropdownMenuSeparator />
+
+                <DropdownMenuLabel>Religious & Caste-Based</DropdownMenuLabel>
+                <DropdownMenuItem><Link href="/religion/hindu">Hindu Content</Link></DropdownMenuItem>
+                <DropdownMenuItem><Link href="/religion/muslim">Muslim Content</Link></DropdownMenuItem>
+                <DropdownMenuItem><Link href="/religion/sikh">Sikh Content</Link></DropdownMenuItem>
+                <DropdownMenuItem><Link href="/religion/christian">Christian Content</Link></DropdownMenuItem>
+                <DropdownMenuItem><Link href="/religion/buddhist">Buddhist Content</Link></DropdownMenuItem>
+                <DropdownMenuItem><Link href="/religion/jain">Jain Content</Link></DropdownMenuItem>
+                <DropdownMenuItem><Link href="/religion/parsi">Parsi Content</Link></DropdownMenuItem>
+
+                <DropdownMenuSeparator />
+
+                <DropdownMenuLabel>Islamic Festivals</DropdownMenuLabel>
+                <DropdownMenuItem><Link href="/festivals/ramzan">Ramzan (Ramadan)</Link></DropdownMenuItem>
+                <DropdownMenuItem><Link href="/festivals/eid-ul-fitr">Eid-ul-Fitr</Link></DropdownMenuItem>
+                <DropdownMenuItem><Link href="/festivals/eid-ul-adha">Eid-ul-Adha</Link></DropdownMenuItem>
+                <DropdownMenuItem><Link href="/festivals/muharram">Muharram</Link></DropdownMenuItem>
+                <DropdownMenuItem><Link href="/festivals/milad-un-nabi">Milad-un-Nabi</Link></DropdownMenuItem>
+
+                <DropdownMenuSeparator />
+
+                <DropdownMenuLabel>Caste Cultural Themes</DropdownMenuLabel>
+                <DropdownMenuItem><Link href="/castes/brahmin">Brahmin Traditions</Link></DropdownMenuItem>
+                <DropdownMenuItem><Link href="/castes/rajput">Rajput Heritage</Link></DropdownMenuItem>
+                <DropdownMenuItem><Link href="/castes/dalit">Dalit Stories</Link></DropdownMenuItem>
+                <DropdownMenuItem><Link href="/castes/jat">Jat Life</Link></DropdownMenuItem>
+                <DropdownMenuItem><Link href="/castes/maratha">Maratha Legacy</Link></DropdownMenuItem>
+                <DropdownMenuItem><Link href="/castes/tribal">Tribal & Indigenous</Link></DropdownMenuItem>
+
+                <DropdownMenuSeparator />
+
+                <DropdownMenuLabel>Global Cultures</DropdownMenuLabel>
+                <DropdownMenuItem><Link href="/global/chinese-new-year">Chinese New Year</Link></DropdownMenuItem>
+                <DropdownMenuItem><Link href="/global/hanukkah">Hanukkah</Link></DropdownMenuItem>
+                <DropdownMenuItem><Link href="/global/christmas">Christmas</Link></DropdownMenuItem>
+                <DropdownMenuItem><Link href="/global/thanksgiving">Thanksgiving</Link></DropdownMenuItem>
+                <DropdownMenuItem><Link href="/global/halloween">Halloween</Link></DropdownMenuItem>
+                <DropdownMenuItem><Link href="/global/easter">Easter</Link></DropdownMenuItem>
+                <DropdownMenuItem><Link href="/global/ramadan-global">Global Ramadan</Link></DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
+
             <Link href="/license" className="text-sm font-medium text-white hover:underline">
               License
             </Link>
@@ -142,7 +206,7 @@ export function Header() {
               </DropdownMenu>
             ) : (
               <Link href="/login">
-                <Button variant="outline" size="sm" className="text-white border-white hover:bg-white hover:text-black">
+                <Button variant="outline" size="sm" className="text-white border-white ">
                   Login
                 </Button>
               </Link>
@@ -150,27 +214,27 @@ export function Header() {
           </div>
         </div>
 
-        {/* Mobile Menu Dropdown */}
+        {/* Mobile Menu */}
         {menuOpen && (
-  <div className="absolute top-16 right-4 w-48 bg-black bg-opacity-90 rounded-lg shadow-lg p-4 space-y-3 md:hidden z-50">
-    <Link href="/explore" onClick={() => setMenuOpen(false)} className="block text-white hover:underline">Explore</Link>
-    <Link href="/license" onClick={() => setMenuOpen(false)} className="block text-white hover:underline">License</Link>
-    <Link href="/creators" onClick={() => setMenuOpen(false)} className="block text-white hover:underline">Creators</Link>
-    <Link href="/upload" onClick={() => setMenuOpen(false)} className="block text-white hover:underline flex items-center">
-      <Upload className="mr-2 h-4 w-4" /> Upload
-    </Link>
-    {userData ? (
-      <>
-        <Link href="/dashboard" onClick={() => setMenuOpen(false)} className="block text-white hover:underline">Dashboard</Link>
-        <Link href="/preferences" onClick={() => setMenuOpen(false)} className="block text-white hover:underline">Preferences</Link>
-        <button onClick={handleLogout} className="block text-left text-white hover:underline">Logout</button>
-      </>
-    ) : (
-      <Link href="/login" onClick={() => setMenuOpen(false)} className="block text-white hover:underline">Login</Link>
-    )}
-  </div>
-)}
-
+          <div className="absolute top-16 right-4 w-64 bg-black bg-opacity-90 rounded-lg shadow-lg p-4 space-y-3 md:hidden z-50">
+            <Link href="/photos" className="block text-white hover:underline">Photos</Link>
+            <Link href="/videos" className="block text-white hover:underline">Videos</Link>
+            <Link href="/music" className="block text-white hover:underline">Music</Link>
+            <Link href="/collections" className="block text-white hover:underline">Collections</Link>
+            <Link href="/license" className="block text-white hover:underline">License</Link>
+            <Link href="/creators" className="block text-white hover:underline">Creators</Link>
+            <Link href="/upload" className="block text-white hover:underline">Upload</Link>
+            {userData ? (
+              <>
+                <Link href="/dashboard" className="block text-white hover:underline">Dashboard</Link>
+                <Link href="/preferences" className="block text-white hover:underline">Preferences</Link>
+                <button onClick={handleLogout} className="block text-left text-white hover:underline">Logout</button>
+              </>
+            ) : (
+              <Link href="/login" className="block text-white hover:underline">Login</Link>
+            )}
+          </div>
+        )}
       </div>
     </header>
   )
